@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import dayjs from 'dayjs';
 import { useAuthStore } from '../stores/auth';
+import { formatPriceDisplay, resolvePriceDecimals, roundAmount } from '../lib/priceFormat';
 
 const JALALI_MONTHS_FA = [
     'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
@@ -90,8 +91,22 @@ let result = `${j.year}/${String(j.month).padStart(2, '0')}/${String(j.day).padS
 export function useFormat() {
     const auth = useAuthStore();
 
+    const currency = computed(() => auth.currency);
+    const decimals = computed(() => resolvePriceDecimals(auth.user?.price_decimals));
     const dateFormat = computed(() => auth.user?.date_format || 'YYYY-MM-DD');
     const isShamsi = computed(() => isShamsiFormat(dateFormat.value));
+
+    function number(value, precision = decimals.value) {
+        return formatPriceDisplay(value, precision, auth.user?.price_format);
+    }
+
+    function money(value, precision = decimals.value) {
+        return `${currency.value} ${number(value, precision)}`;
+    }
+
+    function roundMoney(value, precision = decimals.value) {
+        return roundAmount(value, precision);
+    }
 
     function date(value, format) {
         if (!value) return '';
@@ -117,6 +132,11 @@ export function useFormat() {
     }
 
     return {
+        money,
+        number,
+        roundMoney,
+        currency,
+        decimals,
         date,
         dateTime,
         isShamsi,

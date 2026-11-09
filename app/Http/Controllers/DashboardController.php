@@ -44,7 +44,8 @@ class DashboardController extends Controller
         if (empty($request->warehouse_id)) {
             $warehouse_id = 0;
         } else {
-            $warehouse_id = $request->warehouse_id;
+            $warehouse_id = (int) $request->warehouse_id;
+            abort_unless(in_array($warehouse_id, array_map('intval', $array_warehouses_id), true), 403);
         }
 
         // Sales & Purchases chart: use header date range + warehouse filter

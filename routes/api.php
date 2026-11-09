@@ -246,6 +246,7 @@ Route::middleware(['auth:api', 'Is_Active', 'request.safety', 'token.timeout'])-
     Route::post('/knowledge-base/articles/{knowledge_base_article}/feedback', [KnowledgeBaseArticleController::class, 'submitFeedback']);
 
     Route::get('dashboard_data', 'DashboardController@dashboard_data');
+    Route::get('dashboard/overview', 'DashboardOverviewController');
     Route::get('today_summary', 'TodaySummaryController@index');
     // Profit analysis by dimension: product|category|unit|customer|date|warehouse
     Route::get('report/profit/{dimension}', 'ProfitReportController@index');

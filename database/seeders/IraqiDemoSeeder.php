@@ -130,6 +130,7 @@ class IraqiDemoSeeder extends Seeder
             'app_name' => self::BRAND, 'page_title_suffix' => 'إدارة الفروع والمتجر',
             'footer' => 'براند العراقي • نسخة العرض', 'developed_by' => self::BRAND,
             'logo' => self::LOGO, 'favicon' => self::LOGO, 'default_language' => 'ar',
+            'customize_button_visible' => 0,
             'login_bg_color' => '#152b2b', 'login_footer_text' => 'براند العراقي • نسخة العرض',
             'login_hero_badge' => 'نظام تشغيل الفروع والمتجر', 'login_hero_title' => self::BRAND,
             'login_hero_subtitle' => 'إدارة المبيعات والمخزون والطلبات من مكان واحد.',
