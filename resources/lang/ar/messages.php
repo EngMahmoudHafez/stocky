@@ -484,4 +484,18 @@ return [
     'ZipPostal' => 'الرمز البريدي',
     'SaveAddress' => 'حفظ العنوان',
     'AddressUpdated' => 'تم تحديث عنوانك.',
+
+    'CookieConsentTitle' => 'خصوصيتك تهمنا',
+    'CookieConsentText' => 'نستخدم ملفات تعريف الارتباط لتحسين تجربة التسوق وتحليل استخدام المتجر وتخصيص المحتوى. اختر الأنواع التي ترغب في السماح بها.',
+    'CookieNecessary' => 'ضرورية',
+    'CookieNecessaryHelp' => 'لازمة لتشغيل المتجر وتظل مفعّلة.',
+    'CookieAnalytics' => 'التحليلات',
+    'CookieAnalyticsHelp' => 'تساعدنا في فهم طريقة استخدام المتجر.',
+    'CookieMarketing' => 'التسويق',
+    'CookieMarketingHelp' => 'تساعدنا في عرض عروض وإعلانات تناسب اهتماماتك.',
+    'CookieAcceptAll' => 'قبول الكل',
+    'CookieRejectAll' => 'رفض الكل',
+    'CookieCustomize' => 'تخصيص',
+    'CookieSave' => 'حفظ التفضيلات',
+    'SomeProductsNotFound' => 'بعض المنتجات في سلتك لم تعد متاحة.',
 ];

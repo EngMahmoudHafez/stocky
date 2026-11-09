@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 450">
+  <rect width="420" height="450" fill="#e2eaf0"/>
+  <rect x="18" y="18" width="384" height="414" rx="8" fill="none" stroke="#fff" stroke-opacity=".6"/>
+  <ellipse cx="210" cy="371" rx="106" ry="14" fill="#172624" opacity=".08"/>
+  <path d="M131 114 178 89 242 89 289 114 320 304 282 317 260 194 267 337H153L160 194 138 317 100 304Z" fill="#466782" stroke="#282d2c" stroke-opacity=".3" stroke-width="2"/><path d="M178 89L163 121 196 151 210 116 224 151 257 121 242 89 M210 116V337 M158 316H263 M164 155H199V192L182 199 164 192Z M221 155H256V192L239 199 221 192Z M110 288L142 295 M278 295L310 288" fill="none" stroke="#afc3d2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M38 397h22m-11-7v14" stroke="#36514c" stroke-width="1.5" opacity=".65"/>
+  <text x="70" y="404" fill="#36514c" font-family="sans-serif" font-size="12" letter-spacing="2">IRAQI / JKT</text>
+</svg>

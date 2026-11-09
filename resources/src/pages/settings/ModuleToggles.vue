@@ -88,7 +88,7 @@ function setAll(value) {
 async function save() {
   saving.value = true;
   try {
-    const payload = {};
+    const payload = { ...auth.user?.module_flags };
     for (const m of TOGGLEABLE_MODULES) payload[m.key] = !!flags[m.key];
     await http.put('module_flags', { flags: payload });
     // Live-update this session; other users get the change at next boot.

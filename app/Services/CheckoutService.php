@@ -92,7 +92,10 @@ class CheckoutService
         $ids = collect($items)->pluck('product_id')->map(fn ($v) => (int) $v)->unique()->values();
 
         $products = Product::whereIn('id', $ids)
-            ->get(['id', 'name', 'price', 'TaxNet', 'discount', 'discount_method', 'tax_method',
+            ->whereNull('deleted_at')
+            ->where('is_active', 1)
+            ->where('hide_from_online_store', 0)
+            ->get(['id', 'name', 'price', 'is_variant', 'TaxNet', 'discount', 'discount_method', 'tax_method',
                    'is_preorder', 'preorder_always', 'preorder_available_date', 'preorder_limit', 'preorder_note'])
             ->keyBy('id');
 
@@ -104,7 +107,8 @@ class CheckoutService
         $variantIds = collect($items)->pluck('product_variant_id')->filter()->map(fn ($v) => (int) $v)->unique()->values();
         $variants = $variantIds->isEmpty()
             ? collect()
-            : ProductVariant::whereIn('id', $variantIds)->get(['id', 'product_id', 'price'])->keyBy('id');
+            : ProductVariant::whereIn('id', $variantIds)->whereNull('deleted_at')
+                ->get(['id', 'product_id', 'price'])->keyBy('id');
 
         $stockByKey = [];
         product_warehouse::whereIn('warehouse_id', $warehouseIds)
@@ -127,14 +131,11 @@ class CheckoutService
             $qty = max(1, (float) $i['qty']);
 
             $product = $products->get($pid);
-            $price = (float) $product->price;
-            if ($pvid) {
-                $variant = $variants->get($pvid);
-                if ($variant && (int) $variant->product_id === $pid) {
-                    $price = (float) $variant->price;
-                }
+            $variant = $variants->get($pvid);
+            if (($pvid !== null && $variant?->product_id !== $pid) || ($product->is_variant && ! $variant)) {
+                throw $this->fail(__('messages.SomeProductsNotFound'), 422, ['product_ids' => [$pid]]);
             }
-            $price = round(max(0, $price), 2);
+            $price = round(max(0, (float) ($variant?->price ?? $product->price)), 2);
 
             // Apply the running flash-sale price server-side so the customer is
             // charged the discounted price and can never tamper with it.

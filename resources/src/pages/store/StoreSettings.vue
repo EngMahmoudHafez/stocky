@@ -2,7 +2,10 @@
   <div class="page">
     <PageHeader :title="$t('Settings')" :breadcrumb="[$t('Store'), $t('Settings')]">
       <template #extra>
-        <a-button v-if="!isLoading" type="primary" :loading="saving" @click="save">{{ $t('Save') }}</a-button>
+        <a-space v-if="!isLoading">
+          <a-button v-if="form.enabled" href="/online_store" target="_blank" rel="noopener">{{ $t('Visit_Online_Store') }}</a-button>
+          <a-button type="primary" :loading="saving" @click="save">{{ $t('Save') }}</a-button>
+        </a-space>
       </template>
     </PageHeader>
 
@@ -32,7 +35,7 @@
             <a-form-item :label="$t('Store_Theme')" :extra="$t('Store_Theme_Hint')">
               <a-select v-model:value="form.theme">
                 <a-select-option value="default">{{ $t('Default_Store_Theme') }}</a-select-option>
-                <a-select-option value="real_estate">{{ $t('Real_Estate_Theme') }}</a-select-option>
+                <a-select-option v-if="auth.adminPathEnabled('/realestate')" value="real_estate">{{ $t('Real_Estate_Theme') }}</a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -109,12 +112,12 @@
         </a-alert>
         <div v-if="form.require_invite_code" class="quick-link">
           <span class="muted">{{ $t('Manage_invite_codes_from_dedicated_page') }}</span>
-          <a-button size="small" @click="$router.push('/store/invite-codes')">{{ $t('Manage_Invite_Codes') }}</a-button>
+          <a-button v-if="auth.adminPathEnabled('/store/invite-codes')" size="small" @click="$router.push('/store/invite-codes')">{{ $t('Manage_Invite_Codes') }}</a-button>
         </div>
 
         <a-divider orientation="left">{{ $t('Shipping_and_Tax') }}</a-divider>
         <a-row :gutter="[16, 12]">
-          <a-col v-for="link in QUICK_LINKS" :key="link.to" :xs="24" :md="12">
+          <a-col v-for="link in quickLinks" :key="link.to" :xs="24" :md="12">
             <div class="quick-link">
               <span class="muted">{{ $t(link.label) }}</span>
               <a-button size="small" @click="$router.push(link.to)">{{ $t('Manage') }}</a-button>
@@ -411,7 +414,7 @@
  * Collections come from settings.collections or the
  * admin/store/collections?include_counts=1 fallback.
  */
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import {
@@ -422,8 +425,10 @@ import {
 import PageHeader from '../../components/PageHeader.vue';
 import http from '../../lib/http';
 import { uploadForm } from '../../lib/upload';
+import { useAuthStore } from '../../stores/auth';
 
 const { t } = useI18n();
+const auth = useAuthStore();
 
 const QUICK_LINKS = [
   { to: '/store/shipping-methods', label: 'Shipping_Methods' },
@@ -437,6 +442,7 @@ const QUICK_LINKS = [
   { to: '/store/coupons', label: 'Coupons' },
   { to: '/store/returns', label: 'Returns_Requests' },
 ];
+const quickLinks = computed(() => QUICK_LINKS.filter(link => auth.adminPathEnabled(link.to)));
 
 const isLoading = ref(true);
 const saving = ref(false);

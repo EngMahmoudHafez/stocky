@@ -52,3 +52,11 @@ export function moduleKeyForPath(path) {
     const seg = String(path || '').replace(/^\/+/, '').split('/')[0];
     return PREFIX_TO_MODULE[seg] || null;
 }
+
+/** A local module configuration can also switch off a specific route tree. */
+export function isAdminPathEnabled(flags, path) {
+    return !Object.entries(flags || {}).some(([prefix, enabled]) =>
+        enabled === false && prefix.startsWith('/') &&
+        (path === prefix || path.startsWith(prefix + '/'))
+    );
+}

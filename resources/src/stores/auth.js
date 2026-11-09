@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import http from '../lib/http';
-import { isModuleEnabled } from '../config/modules';
+import { isAdminPathEnabled, isModuleEnabled } from '../config/modules';
 import { hasPlanFeature, canonicalModuleFeature } from '../lib/saasAccess';
 
 /**
@@ -54,6 +54,8 @@ export const useAuthStore = defineStore('auth', {
             }
             return localEnabled;
         },
+        adminPathEnabled: s => path =>
+            s.user?.is_saas_tenant || isAdminPathEnabled(s.user?.module_flags, path),
         // Global export defaults (System Settings → Export). Missing keys keep
         // the historical behavior: full data, totals on, landscape, plain names.
         exportSettings: s => ({

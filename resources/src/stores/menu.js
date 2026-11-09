@@ -1,7 +1,18 @@
 import { defineStore } from 'pinia';
-import { MENU } from '../config/menu';
+import { MENU, resolveTarget } from '../config/menu';
 import { applyMenuOrder } from '../lib/menuOrder';
 import { useAuthStore } from './auth';
+
+function filterDisabledPaths(entries, pathEnabled) {
+    return entries.flatMap(entry => {
+        if (entry.children) {
+            const children = filterDisabledPaths(entry.children, pathEnabled);
+            return children.length ? [{ ...entry, children }] : [];
+        }
+        const path = entry.href || resolveTarget(entry.to)?.path || '';
+        return pathEnabled(path) ? [entry] : [];
+    });
+}
 
 /**
  * The navigation actually rendered by the sidebars: the default MENU arranged
@@ -25,7 +36,10 @@ export const useMenuStore = defineStore('menu', {
             }
             // Drop top-level groups whose module the admin switched off
             // (Settings → Modules). Recomputes live when the toggles save.
-            return arranged.filter(entry => auth.moduleEnabled(entry.key));
+            const enabledGroups = arranged.filter(entry => auth.moduleEnabled(entry.key));
+            return auth.user?.is_saas_tenant
+                ? enabledGroups
+                : filterDisabledPaths(enabledGroups, auth.adminPathEnabled);
         },
     },
 });

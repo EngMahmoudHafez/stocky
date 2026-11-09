@@ -29,10 +29,6 @@ class Kernel extends HttpKernel
     // \App\Http\Middleware\TrustProxies::class,
     \App\Http\Middleware\CheckForMaintenanceMode::class,
     \App\Http\Middleware\CheckInstalled::class,
-
-    // Stocky license expiry
-    \App\Http\Middleware\CheckLicenseExpiry::class,
-
     \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
     \App\Http\Middleware\TrimStrings::class,
     \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
@@ -57,8 +53,6 @@ class Kernel extends HttpKernel
     \App\Http\Middleware\VerifyCsrfToken::class,
     \Illuminate\Routing\Middleware\SubstituteBindings::class,
     \Laravel\Passport\Http\Middleware\CreateFreshApiToken::class,
-
-    \App\Http\Middleware\CheckLicenseExpiry::class,
 ],
 
         'store' => [

@@ -23,10 +23,12 @@ export function isRtlLocale(locale) {
 }
 
 export function storedLocale() {
+    const preferred = globalThis.document?.documentElement.lang;
+    const fallback = SUPPORTED_LOCALES.some(({ value }) => value === preferred) ? preferred : 'en';
     try {
-        return window.localStorage.getItem('language') || 'en';
+        return window.localStorage.getItem('language') || fallback;
     } catch (e) {
-        return 'en';
+        return fallback;
     }
 }
 

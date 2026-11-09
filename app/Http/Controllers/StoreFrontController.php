@@ -171,7 +171,7 @@ class StoreFrontController extends Controller
                 }
 
                 $limit = max(1, (int) ($item['limit'] ?? 8));
-                $layout = in_array(($item['layout'] ?? 'grid'), ['grid', 'carousel'], true) ? $item['layout'] : 'grid';
+                $layout = ($item['layout'] ?? null) === 'carousel' ? 'carousel' : 'grid';
                 $titleOverride = trim((string) ($item['title_override'] ?? ''));
 
                 $collection = Collection::where('slug', $slug)->first()

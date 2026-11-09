@@ -23,6 +23,7 @@ import { MENU_ITEM_ICONS } from '../config/menuItemIcons';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 import { useMenuStore } from '../stores/menu';
+import { isEntryAllowed } from '../lib/saasAccess';
 
 const props = defineProps({
   theme: { type: String, default: 'light' },
@@ -515,6 +516,7 @@ function checkRouteAccess() {
    MENU FILTERING
 ========================================================== */
  function allowed(entry) {
+  if (!auth.user?.is_saas_tenant) return isEntryAllowed(entry, auth);
   if (hasAllAccess.value) return true;
   if (!entry.label) return true;
 

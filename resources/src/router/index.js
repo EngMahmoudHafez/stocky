@@ -813,6 +813,9 @@ router.beforeEach(async to => {
     if (moduleKey && !auth.moduleEnabled(moduleKey)) {
         return { name: 'not-found' };
     }
+    if (!auth.adminPathEnabled(to.path)) {
+        return { name: 'not-found' };
+    }
     return true;
 });
 

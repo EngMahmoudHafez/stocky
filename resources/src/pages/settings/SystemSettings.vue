@@ -296,7 +296,7 @@
               </div>
               <a-switch v-model:checked="setting.enable_multi_pack_selling" />
             </div>
-            <div class="setting-row">
+            <div v-if="auth.adminPathEnabled('/products/vehicle-fitment')" class="setting-row">
               <div>
                 <div class="setting-label">Vehicle Fitment &amp; My Garage</div>
                 <div class="setting-help">
