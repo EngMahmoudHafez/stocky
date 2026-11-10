@@ -13,13 +13,17 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\UserWarehouse;
 use App\Models\Warehouse;
+use App\Policies\TransferPolicy;
 use App\Services\BatchService;
+use App\Services\TransferReceiving;
 use App\utils\helpers;
 use ArPHP\I18N\Arabic;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use PDF;
 
 class TransferController extends BaseController
@@ -34,6 +38,7 @@ class TransferController extends BaseController
         // Backward compatibility: If record_view is null, fall back to role permission check
         $view_records = $user->hasRecordView();
         $is_all_warehouses = $user->is_all_warehouses;
+        $canReceive = app(TransferPolicy::class)->hasReceivePermission($user);
 
         $warehouse_ids = [];
         if (! $is_all_warehouses) {
@@ -58,11 +63,19 @@ class TransferController extends BaseController
         // Check If User Has Permission View  All Records
         $transfers = Transfer::with('from_warehouse', 'to_warehouse')
             ->where('deleted_at', '=', null)
-            ->where(function ($query) use ($view_records) {
+            ->where(function ($query) use ($view_records, $user, $canReceive, $is_all_warehouses, $warehouse_ids) {
                 if (! $view_records) {
-                    return $query->where('user_id', '=', Auth::user()->id);
+                    $query->where('user_id', $user->id);
+                    if ($canReceive) {
+                        $query->orWhere(function ($incoming) use ($is_all_warehouses, $warehouse_ids) {
+                            $incoming->whereNotNull('dispatched_at');
+                            if (! $is_all_warehouses) {
+                                $incoming->whereIn('to_warehouse_id', $warehouse_ids);
+                            }
+                        });
+                    }
                 }
-            });
+            })->when($request->filled('receipt_status'), fn ($query) => $query->where('receipt_status', $request->input('receipt_status')));
 
             // ✅ Restrict by warehouses (from OR to)
         if (! $is_all_warehouses) {
@@ -112,6 +125,13 @@ class TransferController extends BaseController
             $item['statut'] = $transfer->statut;
             // NEW: explicit approval status (old NULL rows are treated as approved in the model accessor)
             $item['approval_status'] = $transfer->approval_status;
+            $item['receipt_status'] = $transfer->receipt_status;
+            $item['can_change_dispatch'] = $transfer->receipt_status === null
+                || ($transfer->receipt_status === Transfer::AWAITING_DISPATCH
+                    && ($view_records || $transfer->user_id === $user->id)
+                    && ($is_all_warehouses || in_array($transfer->from_warehouse_id, $warehouse_ids)));
+            $item['can_receive'] = $canReceive && $transfer->awaitsReceipt()
+                && ($is_all_warehouses || in_array($transfer->to_warehouse_id, $warehouse_ids));
             $data[] = $item;
         }
 
@@ -137,12 +157,11 @@ class TransferController extends BaseController
     {
         $this->authorizeForUser($request->user('api'), 'create', Transfer::class);
 
-        request()->validate([
-            'transfer.from_warehouse' => 'required',
-            'transfer.to_warehouse' => 'required',
-        ]);
+        $this->validateTransferRequest($request);
+        $this->authorizeWarehouse($request->user('api'), (int) $request->input('transfer.from_warehouse'));
+        $usesReceiving = ! $this->containsBatchTrackedProducts($request->input('details'));
 
-        \DB::transaction(function () use ($request) {
+        $id = \DB::transaction(function () use ($request, $usesReceiving) {
             $order = new Transfer;
 
             $order->date = $request->transfer['date'];
@@ -154,7 +173,8 @@ class TransferController extends BaseController
             $order->TaxNet = $request->transfer['TaxNet'] ? $request->transfer['TaxNet'] : 0;
             $order->discount = $request->transfer['discount'] ? $request->transfer['discount'] : 0;
             $order->shipping = $request->transfer['shipping'] ? $request->transfer['shipping'] : 0;
-            $order->statut = $request->transfer['statut'];
+            $order->statut = $usesReceiving ? 'pending' : $request->transfer['statut'];
+            $order->receipt_status = $usesReceiving ? Transfer::AWAITING_DISPATCH : null;
             $order->notes = $request->transfer['notes'];
             $order->GrandTotal = $request['GrandTotal'];
             $order->user_id = Auth::user()->id;
@@ -306,9 +326,10 @@ class TransferController extends BaseController
                 }
             }
 
+            return $order->id;
         }, 10);
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'id' => $id]);
     }
 
     // ------------- Update Transfer -----------\\
@@ -318,17 +339,15 @@ class TransferController extends BaseController
 
         $this->authorizeForUser($request->user('api'), 'update', Transfer::class);
 
-        request()->validate([
-            'transfer.to_warehouse' => 'required',
-            'transfer.from_warehouse' => 'required',
-        ]);
+        $this->validateTransferRequest($request);
 
         \DB::transaction(function () use ($request, $id) {
             $user = Auth::user();
             // New way: Check user's record_view field (user-level boolean)
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
-            $current_Transfer = Transfer::findOrFail($id);
+            $current_Transfer = $this->lockedTransfer($id);
+            $this->authorizeDispatchChange($user, $current_Transfer);
 
             // Check If User Has Permission view All Records
             if (! $view_records) {
@@ -339,6 +358,12 @@ class TransferController extends BaseController
             $Old_Details = TransferDetail::where('transfer_id', $id)->get();
             $data = $request['details'];
             $Trans = $request->transfer;
+            if ($current_Transfer->receipt_status !== null) {
+                $this->authorizeWarehouse($user, (int) $Trans['from_warehouse']);
+                abort_if($this->containsBatchTrackedProducts($data), 422, __('transfers.batch_workflow'));
+                $Trans['statut'] = 'pending';
+                $current_Transfer->approval_status = 'pending';
+            }
             $length = count($data);
 
             // Only already-approved transfers affect stock at update time.
@@ -664,7 +689,8 @@ class TransferController extends BaseController
             // New way: Check user's record_view field (user-level boolean)
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
-            $current_Transfer = Transfer::findOrFail($id);
+            $current_Transfer = $this->lockedTransfer($id);
+            $this->authorizeDispatchChange($user, $current_Transfer);
             $Old_Details = TransferDetail::where('transfer_id', $id)->get();
 
             // Check If User Has Permission view All Records
@@ -817,7 +843,8 @@ class TransferController extends BaseController
             $view_records = $user->hasRecordView();
             $selectedIds = $request->selectedIds;
             foreach ($selectedIds as $Transfer_id) {
-                $current_Transfer = Transfer::findOrFail($Transfer_id);
+                $current_Transfer = $this->lockedTransfer($Transfer_id);
+                $this->authorizeDispatchChange($user, $current_Transfer);
                 $Old_Details = TransferDetail::where('transfer_id', $Transfer_id)->get();
 
                 // Check If User Has Permission view All Records
@@ -1028,6 +1055,7 @@ class TransferController extends BaseController
         $Transfer_data = Transfer::with('details.product.unit')
             ->where('deleted_at', '=', null)
             ->findOrFail($id);
+        $this->authorizeDispatchChange($user, $Transfer_data);
 
         /**
          * Warehouses restriction
@@ -1089,6 +1117,7 @@ class TransferController extends BaseController
         }
 
         $transfer['statut'] = $Transfer_data->statut;
+        $transfer['receipt_status'] = $Transfer_data->receipt_status;
         $transfer['notes'] = $Transfer_data->notes;
         $transfer['date'] = $Transfer_data->date;
         $transfer['tax_rate'] = $Transfer_data->tax_rate;
@@ -1252,22 +1281,15 @@ class TransferController extends BaseController
     public function show(Request $request, $id)
     {
 
-        $this->authorizeForUser($request->user('api'), 'view', Transfer::class);
-        $user = Auth::user();
-        // New way: Check user's record_view field (user-level boolean)
-        // Backward compatibility: If record_view is null, fall back to role permission check
-        $view_records = $user->hasRecordView();
-        $Transfer_data = Transfer::with('details.product.unit')
+        $user = $request->user('api');
+        $this->authorizeForUser($user, 'view', Transfer::class);
+        $Transfer_data = Transfer::with('details.product.unitPurchase', 'dispatcher:id,username')
             ->where('deleted_at', '=', null)
             ->findOrFail($id);
+        $this->authorizeForUser($user, 'viewRecord', $Transfer_data);
+        $policy = app(TransferPolicy::class);
 
         $details = [];
-        // Check If User Has Permission view All Records
-        if (! $view_records) {
-            // Check If User->id === Transfer->id
-            $this->authorizeForUser($request->user('api'), 'check_record', $Transfer_data);
-        }
-
         $transfer['id'] = $Transfer_data->id;
         $transfer['date'] = $Transfer_data->date.' '.$Transfer_data->time;
         $transfer['note'] = $Transfer_data->notes;
@@ -1277,21 +1299,24 @@ class TransferController extends BaseController
         $transfer['items'] = $Transfer_data->items;
         $transfer['statut'] = $Transfer_data->statut;
         $transfer['approval_status'] = $Transfer_data->approval_status;
+        $transfer['receipt_status'] = $Transfer_data->receipt_status;
+        $transfer['dispatched_by'] = $Transfer_data->dispatcher?->username;
+        $transfer['dispatched_at'] = $Transfer_data->dispatched_at?->toDateTimeString();
+        $transfer['can_change_dispatch'] = $Transfer_data->receipt_status === null
+            || ($Transfer_data->receipt_status === Transfer::AWAITING_DISPATCH
+                && $policy->warehouseAccess($user, $Transfer_data->from_warehouse_id));
+        $transfer['can_receive'] = $Transfer_data->awaitsReceipt() && $policy->receive($user, $Transfer_data);
+        $transfer['receipt_version'] = $Transfer_data->receipt_version;
+        $transfer['receipt_request_id'] = $transfer['can_receive'] ? (string) Str::uuid() : null;
         $transfer['GrandTotal'] = $Transfer_data->GrandTotal;
 
         $batchesByDetail = app(BatchService::class)->batchesForTransferDetails($Transfer_data['details']);
 
         foreach ($Transfer_data['details'] as $detail) {
 
-            // -------check if detail has purchase_unit_id Or Null
-            if ($detail->purchase_unit_id !== null) {
-                $unit = Unit::where('id', $detail->purchase_unit_id)->first();
-            } else {
-                $product_unit_purchase_id = Product::with('unitPurchase')
-                    ->where('id', $detail->product_id)
-                    ->first();
-                $unit = Unit::where('id', $product_unit_purchase_id['unitPurchase']->id)->first();
-            }
+            $unit = $detail->purchase_unit_id !== null
+                ? Unit::find($detail->purchase_unit_id)
+                : $detail->product?->unitPurchase;
 
             if ($detail->product_variant_id) {
 
@@ -1306,8 +1331,10 @@ class TransferController extends BaseController
                 $data['name'] = $detail['product']['name'];
             }
 
+            $data['id'] = $detail->id;
             $data['quantity'] = $detail->quantity;
-            $data['unit'] = $unit->ShortName;
+            $data['received_quantity'] = $detail->received_quantity;
+            $data['unit'] = $unit?->ShortName;
             $data['total'] = $detail->total;
             $data['is_batch_tracked'] = (bool) ($detail['product']['is_batch_tracked'] ?? false);
             $data['batches'] = $batchesByDetail[(int) $detail->id] ?? [];
@@ -1318,6 +1345,15 @@ class TransferController extends BaseController
         return response()->json([
             'details' => $details,
             'transfer' => $transfer,
+            'receipts' => $Transfer_data->receipts()->with('receiver:id,username')->orderBy('id')->get()
+                ->map(fn ($receipt) => [
+                    'id' => $receipt->id,
+                    'action' => $receipt->action,
+                    'notes' => $receipt->notes,
+                    'lines' => $receipt->lines,
+                    'received_by' => $receipt->receiver?->username,
+                    'created_at' => $receipt->created_at->toDateTimeString(),
+                ]),
         ]);
     }
 
@@ -1350,6 +1386,13 @@ class TransferController extends BaseController
         $transfer_data = Transfer::with('details.product.unitPurchase')
             ->where('deleted_at', '=', null)
             ->findOrFail($id);
+
+        if ($transfer_data->receipt_status !== null) {
+            $user = $request->user('api');
+            abort_unless($user, 401);
+            $this->authorizeForUser($user, 'view', Transfer::class);
+            $this->authorizeForUser($user, 'viewRecord', $transfer_data);
+        }
 
         $batchesByDetail = app(BatchService::class)->batchesForTransferDetails($transfer_data['details']);
 
@@ -1431,9 +1474,10 @@ class TransferController extends BaseController
             // New way: Check user's record_view field (user-level boolean)
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
-            $transfer = Transfer::with('details')
-                ->where('deleted_at', '=', null)
-                ->findOrFail($id);
+            $transfer = $this->lockedTransfer($id);
+            if ($transfer->receipt_status !== null) {
+                $this->authorizeWarehouse($user, $transfer->from_warehouse_id);
+            }
 
             if (! $view_records) {
                 $this->authorizeForUser($request->user('api'), 'check_record', $transfer);
@@ -1447,6 +1491,12 @@ class TransferController extends BaseController
 
             if ($transfer->approval_status === 'rejected') {
                 abort(422, 'Rejected transfers cannot be approved without editing.');
+            }
+
+            if ($transfer->receipt_status === Transfer::AWAITING_DISPATCH) {
+                app(TransferReceiving::class)->dispatch($transfer, $user->id);
+
+                return;
             }
 
             // Apply initial stock movement based on the stored header + details.
@@ -1471,7 +1521,10 @@ class TransferController extends BaseController
             // New way: Check user's record_view field (user-level boolean)
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
-            $transfer = Transfer::where('deleted_at', '=', null)->findOrFail($id);
+            $transfer = $this->lockedTransfer($id);
+            if ($transfer->receipt_status !== null) {
+                $this->authorizeWarehouse($user, $transfer->from_warehouse_id);
+            }
 
             if (! $view_records) {
                 $this->authorizeForUser($request->user('api'), 'check_record', $transfer);
@@ -1487,6 +1540,69 @@ class TransferController extends BaseController
         }, 10);
 
         return response()->json(['success' => true]);
+    }
+
+    public function receive(Request $request, $id, TransferReceiving $receiving)
+    {
+        $user = $request->user('api');
+        $this->authorizeForUser($user, 'view', Transfer::class);
+        $receipt = $request->validate([
+            'request_id' => ['required', 'uuid'],
+            'version' => ['required', 'integer', 'min:0'],
+            'action' => ['required', Rule::in(['receive', 'reject'])],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'lines' => ['required_if:action,receive', 'array'],
+            'lines.*.detail_id' => ['required', 'integer', 'distinct'],
+            'lines.*.counted_quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0', 'max:999999999.999'],
+        ]);
+
+        DB::transaction(function () use ($receiving, $receipt, $user, $id) {
+            $transfer = $this->lockedTransfer($id);
+            $this->authorizeForUser($user, 'receive', $transfer);
+            $receiving->record($transfer, $user->id, $receipt);
+        }, 5);
+
+        return response()->json(['success' => true]);
+    }
+
+    private function lockedTransfer($id): Transfer
+    {
+        return Transfer::whereNull('deleted_at')->lockForUpdate()->findOrFail($id);
+    }
+
+    private function authorizeWarehouse(User $user, int $warehouseId): void
+    {
+        abort_unless(app(TransferPolicy::class)->warehouseAccess($user, $warehouseId), 403);
+    }
+
+    private function authorizeDispatchChange(User $user, Transfer $transfer): void
+    {
+        if ($transfer->receipt_status === null) {
+            return;
+        }
+
+        $this->authorizeWarehouse($user, $transfer->from_warehouse_id);
+        abort_unless($transfer->receipt_status === Transfer::AWAITING_DISPATCH, 409, __('transfers.dispatched_locked'));
+    }
+
+    private function validateTransferRequest(Request $request): void
+    {
+        $warehouse = Rule::exists('warehouses', 'id')->whereNull('deleted_at');
+        $request->validate([
+            'transfer.from_warehouse' => ['required', 'integer', $warehouse],
+            'transfer.to_warehouse' => ['required', 'integer', 'different:transfer.from_warehouse', $warehouse],
+            'details' => ['required', 'array', 'min:1'],
+            'details.*.product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('deleted_at')],
+            'details.*.product_variant_id' => ['nullable', 'integer', Rule::exists('product_variants', 'id')->whereNull('deleted_at')],
+            'details.*.purchase_unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')->whereNull('deleted_at')],
+            'details.*.quantity' => ['required', 'numeric', 'decimal:0,3', 'min:0.001', 'max:999999999.999'],
+        ]);
+    }
+
+    private function containsBatchTrackedProducts(array $details): bool
+    {
+        return app(BatchService::class)->isSupported()
+            && Product::whereIn('id', array_column($details, 'product_id'))->where('is_batch_tracked', true)->exists();
     }
 
     /**

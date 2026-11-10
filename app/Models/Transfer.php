@@ -6,6 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transfer extends Model
 {
+    public const AWAITING_DISPATCH = 'awaiting_dispatch';
+
+    public const IN_TRANSIT = 'in_transit';
+
+    public const PARTIALLY_RECEIVED = 'partially_received';
+
+    public const RECEIVED = 'received';
+
+    public const RECEIPT_REJECTED = 'receipt_rejected';
+
     protected $table = 'transfers';
 
     protected $dates = ['deleted_at'];
@@ -26,6 +36,8 @@ class Transfer extends Model
         'shipping' => 'double',
         'TaxNet' => 'double',
         'tax_rate' => 'double',
+        'receipt_version' => 'integer',
+        'dispatched_at' => 'datetime',
 
     ];
 
@@ -37,6 +49,21 @@ class Transfer extends Model
     public function details()
     {
         return $this->hasMany('App\Models\TransferDetail');
+    }
+
+    public function receipts()
+    {
+        return $this->hasMany(TransferReceipt::class);
+    }
+
+    public function dispatcher()
+    {
+        return $this->belongsTo(User::class, 'dispatched_by');
+    }
+
+    public function awaitsReceipt(): bool
+    {
+        return in_array($this->receipt_status, [self::IN_TRANSIT, self::PARTIALLY_RECEIVED], true);
     }
 
     public function from_warehouse()

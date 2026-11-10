@@ -23,6 +23,8 @@ class TransferDetail extends Model
         'purchase_unit_id' => 'integer',
         'product_id' => 'integer',
         'product_variant_id' => 'integer',
+        'dispatched_stock_quantity' => 'double',
+        'received_quantity' => 'double',
     ];
 
     public function transfer()

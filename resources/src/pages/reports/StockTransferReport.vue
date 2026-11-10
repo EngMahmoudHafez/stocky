@@ -31,7 +31,9 @@
       <template v-if="column.key === 'date_time'">{{ dateTime(record.date_time) }}</template>
       <template v-else-if="column.key === 'value'">{{ money(record.value) }}</template>
       <template v-else-if="column.key === 'statut'">
-        <a-tag :color="docStatusColor(record.statut)">{{ record.statut }}</a-tag>
+        <a-tag :color="receiptStatusColor(record.receipt_status) || docStatusColor(record.statut)">
+          {{ transferStatus(record) }}
+        </a-tag>
       </template>
     </template>
   </ReportPage>
@@ -47,8 +49,9 @@ import { useCrudTable } from '../../composables/useCrudTable';
 import { useFormat } from '../../composables/useFormat';
 import { docStatusColor } from '../../lib/statusColors';
 import DateRangePicker from '../../components/DateRangePicker.vue';
+import { receiptStatusColor, receiptStatusLabel } from '../transfers/receiptStatus';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { money, dateTime } = useFormat();
 
 const range = ref([dayjs().subtract(29, 'day'), dayjs()]);
@@ -74,6 +77,7 @@ const warehouseOptions = computed(() =>
 
 const timeseries = computed(() => crud.payload.value?.data?.timeseries || []);
 const chartFields = computed(() => [{ key: 'qty', label: t('Qty') }]);
+const transferStatus = record => receiptStatusLabel(record.receipt_status, locale.value) || record.statut;
 
 const columns = computed(() => [
   { title: t('ID'), dataIndex: 'transfer_id', key: 'transfer_id', sorter: true },
@@ -82,7 +86,7 @@ const columns = computed(() => [
   { title: t('to'), dataIndex: 'to', key: 'to' },
   { title: t('Qty'), dataIndex: 'qty', key: 'qty', sorter: true, align: 'right', sum: true },
   { title: t('Value'), key: 'value', dataIndex: 'value', sorter: true, align: 'right', sum: 'money', exportValue: r => money(r.value) },
-  { title: t('Status'), key: 'statut', dataIndex: 'statut', exportValue: r => r.statut },
+  { title: t('Status'), key: 'statut', dataIndex: 'statut', exportValue: transferStatus },
 ]);
 
 onMounted(crud.fetchRows);

@@ -1311,6 +1311,7 @@ Route::middleware(['auth:api', 'Is_Active', 'request.safety', 'token.timeout'])-
     Route::post('transfers/delete/by_selection', 'TransferController@delete_by_selection');
     Route::post('transfers/{id}/approve', 'TransferController@approve');
     Route::post('transfers/{id}/reject', 'TransferController@reject');
+    Route::post('transfers/{id}/receive', 'TransferController@receive');
     Route::get('batches_for_transfer/{product_id}/{warehouse_id}/{variant_id?}', 'TransferController@batches_for_transfer');
 
     // ------------------------------- Users --------------------------\\

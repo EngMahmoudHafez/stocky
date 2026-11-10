@@ -60,7 +60,7 @@
       :data-source="crud.rows.value"
       :loading="crud.loading.value"
       :pagination="crud.pagination.value"
-      :row-selection="selectable ? crud.rowSelection.value : undefined"
+      :row-selection="rowSelection"
       :row-key="rowKey"
       :scroll="{ x: 'max-content' }"
       :size="dt.density"
@@ -122,9 +122,18 @@ const props = defineProps({
   searchable: { type: Boolean, default: true },
   // Row checkboxes + bulk delete (endpoint must support /delete/by_selection).
   selectable: { type: Boolean, default: false },
+  rowSelectable: { type: Function, default: null },
 });
 
 const dt = useDatatableStore();
+
+const rowSelection = computed(() => {
+  if (!props.selectable) return undefined;
+  const selection = props.crud.rowSelection.value;
+  return props.rowSelectable
+    ? { ...selection, getCheckboxProps: record => ({ disabled: !props.rowSelectable(record) }) }
+    : selection;
+});
 
 const toolbarVisible = computed(() =>
   (props.searchable && dt.showSearch) || props.selectable || dt.showColumns || dt.showRefresh

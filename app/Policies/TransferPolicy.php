@@ -3,7 +3,9 @@
 namespace App\Policies;
 
 use App\Models\Permission;
+use App\Models\Transfer;
 use App\Models\User;
+use App\Models\UserWarehouse;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TransferPolicy
@@ -81,6 +83,33 @@ class TransferPolicy
     public function check_record(User $user, $transfer)
     {
         return $user->id === $transfer->user_id;
+    }
+
+    public function receive(User $user, Transfer $transfer): bool
+    {
+        return $this->hasReceivePermission($user) && $this->warehouseAccess($user, $transfer->to_warehouse_id);
+    }
+
+    public function viewRecord(User $user, Transfer $transfer): bool
+    {
+        $destinationAccess = $this->warehouseAccess($user, $transfer->to_warehouse_id);
+
+        return ($destinationAccess || $this->warehouseAccess($user, $transfer->from_warehouse_id))
+            && ($user->hasRecordView() || $this->check_record($user, $transfer)
+                || ($destinationAccess && $transfer->dispatched_at && $this->hasReceivePermission($user)));
+    }
+
+    public function hasReceivePermission(User $user): bool
+    {
+        $permission = Permission::where('name', 'transfer_receive')->whereNull('deleted_at')->first();
+
+        return $permission && $user->hasRole($permission->roles);
+    }
+
+    public function warehouseAccess(User $user, int $warehouseId): bool
+    {
+        return (bool) $user->is_all_warehouses || UserWarehouse::where('user_id', $user->id)
+            ->where('warehouse_id', $warehouseId)->exists();
     }
 
     /**

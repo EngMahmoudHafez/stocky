@@ -116,7 +116,7 @@
                 </a-form-item>
               </a-col>
               <a-col :xs="12" :md="8">
-                <a-form-item :label="$t('Status')">
+                <a-form-item v-if="!usesReceiving" :label="$t('Status')">
                   <a-select
                     v-model:value="transfer.statut"
                     :options="[
@@ -125,6 +125,9 @@
                       { value: 'pending', label: $t('Pending') },
                     ]"
                   />
+                </a-form-item>
+                <a-form-item v-else :label="$t('Status')">
+                  <a-tag>{{ receiptStatusLabel('awaiting_dispatch', locale) }}</a-tag>
                 </a-form-item>
               </a-col>
               <a-col :span="24">
@@ -189,8 +192,9 @@ import { useFormat } from '../../composables/useFormat';
 import { recomputeCostLine, computeSimpleTotals } from '../../lib/lineCalc';
 import { resolveScan } from '../../lib/scanMatch';
 import http from '../../lib/http';
+import { receiptStatusLabel } from './receiptStatus';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const { money } = useFormat();
@@ -205,6 +209,9 @@ const warehouses = ref([]);
 const toWarehouses = ref([]);
 const products = ref([]);
 const lines = ref([]);
+const usesReceiving = computed(() => isEdit.value
+  ? Boolean(transfer.value.receipt_status)
+  : !lines.value.some(line => line.is_batch_tracked));
 // `null`, never `undefined`: antd's Select falls back to its own internal
 // selection whenever the bound value is undefined, so clearing it that way
 // leaves the last picked product on screen instead of the placeholder.
@@ -430,7 +437,7 @@ async function submit() {
       date: transfer.value.date,
       from_warehouse: transfer.value.from_warehouse,
       to_warehouse: transfer.value.to_warehouse,
-      statut: transfer.value.statut,
+      statut: usesReceiving.value ? 'pending' : transfer.value.statut,
       notes: transfer.value.notes,
       items: lines.value.length,
       tax_rate: Number(transfer.value.tax_rate) || 0,
@@ -471,6 +478,7 @@ onMounted(async () => {
         from_warehouse: tr.from_warehouse,
         to_warehouse: tr.to_warehouse,
         statut: tr.statut,
+        receipt_status: tr.receipt_status,
         notes: tr.notes || '',
         tax_rate: Number(tr.tax_rate) || 0,
         discount: Number(tr.discount) || 0,

@@ -37,7 +37,7 @@
       </a-row>
     </a-card>
 
-    <DataTable :crud="crud" :columns="columns" :selectable="auth.can('transfer_delete')">
+    <DataTable :crud="crud" :columns="columns" :selectable="auth.can('transfer_delete')" :row-selectable="record => record.can_change_dispatch">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'date'">{{ dateTime(record.date) }}</template>
         <template v-else-if="column.key === 'Ref'">
@@ -45,7 +45,9 @@
         </template>
         <template v-else-if="column.key === 'GrandTotal'">{{ money(record.GrandTotal) }}</template>
         <template v-else-if="column.key === 'statut'">
-          <a-tag :color="transferStatusColor(record.statut)">{{ $t(transferStatusKey(record.statut)) }}</a-tag>
+          <a-tag :color="receiptStatusColor(record.receipt_status) || transferStatusColor(record.statut)">
+            {{ receiptStatusLabel(record.receipt_status, locale) || $t(transferStatusKey(record.statut)) }}
+          </a-tag>
         </template>
         <template v-else-if="column.key === 'approval_status'">
           <a-tag :color="approvalColor(record.approval_status)">{{ $t(approvalKey(record.approval_status)) }}</a-tag>
@@ -62,17 +64,20 @@
                 <template #icon><EyeOutlined style="color: #1677ff" /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip v-if="record.approval_status === 'pending' && auth.can('transfer_edit')" :title="$t('Approve')">
+            <a-button v-if="record.can_receive" size="small" type="primary" @click="$router.push(`/transfers/${record.id}`)">
+              {{ locale === 'ar' ? 'مطابقة الاستلام' : 'Check receipt' }}
+            </a-button>
+            <a-tooltip v-if="record.can_change_dispatch && record.approval_status === 'pending' && auth.can('transfer_edit')" :title="approveLabel(record)">
               <a-button type="text" size="small" @click="approve(record)">
                 <template #icon><CheckOutlined style="color: #52c41a" /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip v-if="auth.can('transfer_edit')" :title="$t('Edit')">
+            <a-tooltip v-if="record.can_change_dispatch && auth.can('transfer_edit')" :title="$t('Edit')">
               <a-button type="text" size="small" @click="$router.push(`/transfers/${record.id}/edit`)">
                 <template #icon><EditOutlined style="color: #52c41a" /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip v-if="auth.can('transfer_delete')" :title="$t('Del')">
+            <a-tooltip v-if="record.can_change_dispatch && auth.can('transfer_delete')" :title="$t('Del')">
               <a-button type="text" size="small" danger @click="crud.remove(record, { label: record.Ref })">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
@@ -106,8 +111,9 @@ import { useCrudTable } from '../../composables/useCrudTable';
 import { useFormat } from '../../composables/useFormat';
 import { useAuthStore } from '../../stores/auth';
 import http from '../../lib/http';
+import { receiptStatusColor, receiptStatusLabel, receiptStatusOptions } from './receiptStatus';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { money, dateTime } = useFormat();
 const auth = useAuthStore();
 
@@ -117,7 +123,8 @@ const crud = useCrudTable('transfers', {
   rowsKey: 'transfers',
   params: () => ({
     Ref: '',
-    statut: filters.value.statut || '',
+    statut: receiptStatusLabel(filters.value.statut, locale.value) ? '' : filters.value.statut,
+    receipt_status: receiptStatusLabel(filters.value.statut, locale.value) ? filters.value.statut : '',
     from_warehouse_id: filters.value.from_warehouse_id || '',
     to_warehouse_id: filters.value.to_warehouse_id || '',
   }),
@@ -128,6 +135,7 @@ const warehouseOptions = computed(() =>
   (crud.payload.value?.warehouses || []).map(w => ({ value: w.id, label: w.name }))
 );
 const statusOptions = computed(() => [
+  ...receiptStatusOptions(locale.value),
   { value: 'completed', label: t('complete') },
   { value: 'sent', label: t('Sent') },
   { value: 'pending', label: t('Pending') },
@@ -155,7 +163,7 @@ const columns = computed(() => [
   { title: t('ToWarehouse'), dataIndex: 'to_warehouse', key: 'to_warehouse' },
   { title: t('Items'), dataIndex: 'items', key: 'items', align: 'right' },
   { title: t('Total'), dataIndex: 'GrandTotal', key: 'GrandTotal', sorter: true, align: 'right', exportValue: r => money(r.GrandTotal) },
-  { title: t('Status'), dataIndex: 'statut', key: 'statut', sorter: true, exportValue: r => r.statut },
+  { title: t('Status'), dataIndex: 'statut', key: 'statut', sorter: true, exportValue: r => receiptStatusLabel(r.receipt_status, locale.value) || t(transferStatusKey(r.statut)) },
   { title: t('Approval'), dataIndex: 'approval_status', key: 'approval_status', exportValue: r => r.approval_status || 'approved' },
   { title: t('Action'), key: 'actions', width: 190, align: 'center' },
 ]);
@@ -165,12 +173,17 @@ function downloadPdf(record) {
     .catch(() => message.error(t('InvalidData')));
 }
 
+function approveLabel(record) {
+  if (!record.receipt_status) return t('Approve');
+  return locale.value === 'ar' ? 'اعتماد وإرسال' : 'Approve and dispatch';
+}
+
 function approve(record) {
   Modal.confirm({
-    title: t('Approve'),
+    title: approveLabel(record),
     icon: createVNode(ExclamationCircleOutlined),
     content: record.Ref,
-    okText: t('Approve'),
+    okText: approveLabel(record),
     async onOk() {
       try {
         await http.post(`transfers/${record.id}/approve`);

@@ -10464,8 +10464,8 @@ public function draftInvoices(Request $request)
             ->selectRaw('wf.name as from_wh, wt.name as to_wh')
             ->selectRaw('COALESCE(SUM(d.quantity),0) as qty')
             ->selectRaw('COALESCE(SUM(d.total),0) as val')
-            ->selectRaw('t.statut as statut')
-            ->groupBy('t.id', 'dt', 'from_wh', 'to_wh', 't.statut');
+            ->selectRaw('t.statut as statut, t.receipt_status')
+            ->groupBy('t.id', 'dt', 'from_wh', 'to_wh', 't.statut', 't.receipt_status');
 
         $totalRows = DB::table(DB::raw("({$tableBase->toSql()}) as x"))
             ->mergeBindings($tableBase->getQuery())
@@ -10489,6 +10489,7 @@ public function draftInvoices(Request $request)
                     'qty'         => (float) $r->qty,
                     'value'       => (float) $r->val,
                     'statut'      => $r->statut,
+                    'receipt_status' => $r->receipt_status,
                 ];
             });
 

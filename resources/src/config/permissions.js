@@ -206,6 +206,10 @@ export const PERMISSION_GROUPS = [
                 "l": "Edit"
             },
             {
+                "v": "transfer_receive",
+                "l": "Received"
+            },
+            {
                 "v": "transfer_delete",
                 "l": "Del"
             }
