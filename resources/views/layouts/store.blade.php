@@ -340,9 +340,7 @@
             <div x-show="open" x-cloak x-transition
                  class="absolute end-0 mt-1 w-36 bg-bg-elevated border border-line-subtle rounded-md shadow-lg py-1 z-50">
               <a class="block px-3 py-2 text-sm text-fg-primary hover:bg-bg-muted" href="{{ route('lang.switch', 'en') }}">English</a>
-              <a class="block px-3 py-2 text-sm text-fg-primary hover:bg-bg-muted" href="{{ route('lang.switch', 'fr') }}">Français</a>
               <a class="block px-3 py-2 text-sm text-fg-primary hover:bg-bg-muted" href="{{ route('lang.switch', 'ar') }}">العربية</a>
-              <a class="block px-3 py-2 text-sm text-fg-primary hover:bg-bg-muted" href="{{ route('lang.switch', 'es') }}">Español</a>
             </div>
           </div>
 

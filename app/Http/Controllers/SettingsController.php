@@ -25,6 +25,8 @@ class SettingsController extends Controller
     {
         $this->authorizeForUser($request->user('api'), 'update', Setting::class);
 
+        $request->validate(['default_language' => ['sometimes', \Illuminate\Validation\Rule::in(Language::SUPPORTED_LOCALES)]]);
+
         $setting = Setting::findOrFail($id);
         $currentAvatar = $setting->logo;
         // Only process logo if a file was actually uploaded
@@ -50,11 +52,7 @@ class SettingsController extends Controller
         } else {
             $filename = $currentAvatar;
         }
-        if ($request['currency'] != 'null') {
-            $currency = $request['currency'];
-        } else {
-            $currency = null;
-        }
+        $currency = Currency::retail()->id;
 
         if ($request['client'] != 'null') {
             $client = $request['client'];
@@ -83,11 +81,7 @@ class SettingsController extends Controller
             $default_payment_method_id = (int) $request['default_payment_method'];
         }
 
-        if ($request['default_language'] != 'null') {
-            $default_language = $request['default_language'];
-        } else {
-            $default_language = 'en';
-        }
+        $default_language = $request->input('default_language', $setting->default_language);
 
         if ($request['is_invoice_footer'] == '1' || $request['is_invoice_footer'] == 'true') {
             $is_invoice_footer = 1;
@@ -904,7 +898,7 @@ class SettingsController extends Controller
                 $zones_array[$key]['label'] = $zones_array[$key]['diff_from_GMT'].' - '.$zones_array[$key]['zone'];
             }
 
-            $Currencies = Currency::where('deleted_at', null)->get(['id', 'name']);
+            $Currencies = collect([Currency::retail()->only(['id', 'name'])]);
             $clients = client::where('deleted_at', '=', null)->get(['id', 'name']);
             $sms_gateway = sms_gateway::where('deleted_at', '=', null)->get(['id', 'title']);
 
@@ -917,7 +911,7 @@ class SettingsController extends Controller
                 $warehouses = Warehouse::where('deleted_at', '=', null)->whereIn('id', $warehouses_id)->get(['id', 'name']);
             }
 
-            $languages = Language::where('is_active', true)->get(['name', 'locale']);
+            $languages = Language::supported()->where('is_active', true)->get(['name', 'locale']);
             $accounts = Account::whereNull('deleted_at')->get(['id', 'account_name', 'account_num']);
             $payment_methods = PaymentMethod::whereNull('deleted_at')->get(['id', 'name']);
 
@@ -1391,7 +1385,7 @@ class SettingsController extends Controller
                 $zones_array[$key]['label'] = $zones_array[$key]['diff_from_GMT'].' - '.$zones_array[$key]['zone'];
             }
 
-            $Currencies = Currency::where('deleted_at', null)->get(['id', 'name']);
+            $Currencies = collect([Currency::retail()->only(['id', 'name'])]);
             $clients = client::where('deleted_at', '=', null)->get(['id', 'name']);
             $sms_gateway = sms_gateway::where('deleted_at', '=', null)->get(['id', 'title']);
 
@@ -1404,7 +1398,7 @@ class SettingsController extends Controller
                 $warehouses = Warehouse::where('deleted_at', '=', null)->whereIn('id', $warehouses_id)->get(['id', 'name']);
             }
 
-            $languages = Language::where('is_active', true)->get(['name', 'locale']);
+            $languages = Language::supported()->where('is_active', true)->get(['name', 'locale']);
 
             return response()->json([
                 'settings' => $item,

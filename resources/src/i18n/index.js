@@ -11,9 +11,7 @@ import { createI18n } from 'vue-i18n';
 
 export const SUPPORTED_LOCALES = [
     { value: 'en', label: 'English', flag: '🇬🇧' },
-    { value: 'fr', label: 'Français', flag: '🇫🇷' },
-    { value: 'es', label: 'Español', flag: '🇪🇸' },
-    { value: 'ar', label: 'العربية', flag: '🇸🇦' },
+    { value: 'ar', label: 'العربية', flag: '🇪🇬' },
 ];
 
 const RTL_LOCALES = ['ar'];
@@ -26,7 +24,8 @@ export function storedLocale() {
     const preferred = globalThis.document?.documentElement.lang;
     const fallback = SUPPORTED_LOCALES.some(({ value }) => value === preferred) ? preferred : 'en';
     try {
-        return window.localStorage.getItem('language') || fallback;
+        const saved = window.localStorage.getItem('language');
+        return SUPPORTED_LOCALES.some(({ value }) => value === saved) ? saved : fallback;
     } catch (e) {
         return fallback;
     }
@@ -71,6 +70,7 @@ const loaded = new Set();
  * readable because the legacy keys are English-ish (e.g. 'Search_this_table').
  */
 export async function loadLocale(locale) {
+    if (!SUPPORTED_LOCALES.some(({ value }) => value === locale)) locale = storedLocale();
     if (!loaded.has(locale)) {
         try {
             const res = await fetch(`/api/translations/${locale}`, {

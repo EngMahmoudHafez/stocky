@@ -30,7 +30,6 @@ const Categories = lazy('Categories', () => import('../pages/Categories.vue'));
 const SubCategories = lazy('SubCategories', () => import('../pages/SubCategories.vue'));
 const Units = lazy('Units', () => import('../pages/Units.vue'));
 const SizeGuides = lazy('SizeGuides', () => import('../pages/SizeGuides.vue'));
-const Currencies = lazy('Currencies', () => import('../pages/Currencies.vue'));
 const Warehouses = lazy('Warehouses', () => import('../pages/Warehouses.vue'));
 const NotFound = lazy('NotFound', () => import('../pages/NotFound.vue'));
 
@@ -385,7 +384,6 @@ const routes = [
             { path: 'subcategories', name: 'subcategories', component: SubCategories, meta: { title: 'SubCategories', permission: 'subcategory' } },
             { path: 'units', name: 'units', component: Units, meta: { title: 'Units', permission: 'unit' } },
             { path: 'size-guides', name: 'size-guides', component: SizeGuides, meta: { title: 'Size Guides', permission: 'size_guides' } },
-            { path: 'currencies', name: 'currencies', component: Currencies, meta: { title: 'Currencies', permission: 'currency' } },
             { path: 'warehouses', name: 'warehouses', component: Warehouses, meta: { title: 'Warehouses', permission: 'warehouse' } },
             // Reports
             { path: 'reports/dead-stock', name: 'dead-stock-report', component: DeadStockReport, meta: { title: 'Dead Stock Report', permission: 'Dead_Stock_Report' } },
@@ -561,9 +559,9 @@ const routes = [
             { path: 'accounting-v2/dashboard', name: 'accounting-v2-dashboard', component: AccountingDashboard, meta: { title: 'Accounting Dashboard', permission: 'accounting_dashboard' } },
             { path: 'accounting-v2/chart-of-accounts', name: 'accounting-v2-coa', component: ChartOfAccounts, meta: { title: 'Chart of Accounts', permission: 'chart_of_accounts' } },
             { path: 'accounting-v2/journal-entries', name: 'accounting-v2-journal-entries', component: JournalEntries, meta: { title: 'Journal Entries', permission: 'journal_entries' } },
-            { path: 'accounting-v2/reports/trial-balance', name: 'accounting-v2-trial-balance', component: TrialBalance, meta: { title: 'Trial Balance', permission: 'journal_entries' } },
-            { path: 'accounting-v2/reports/profit-and-loss', name: 'accounting-v2-profit-loss', component: ProfitAndLossV2, meta: { title: 'Profit and Loss', permission: 'journal_entries' } },
-            { path: 'accounting-v2/reports/balance-sheet', name: 'accounting-v2-balance-sheet', component: BalanceSheet, meta: { title: 'Balance Sheet', permission: 'journal_entries' } },
+            { path: 'accounting-v2/reports/trial-balance', name: 'accounting-v2-trial-balance', component: TrialBalance, meta: { title: 'Trial Balance', permission: 'trial_balance' } },
+            { path: 'accounting-v2/reports/profit-and-loss', name: 'accounting-v2-profit-loss', component: ProfitAndLossV2, meta: { title: 'Profit and Loss', permission: 'accounting_profit_loss' } },
+            { path: 'accounting-v2/reports/balance-sheet', name: 'accounting-v2-balance-sheet', component: BalanceSheet, meta: { title: 'Balance Sheet', permission: 'balance_sheet' } },
             { path: 'accounting-v2/reports/tax-report', name: 'accounting-v2-tax-report', component: TaxReportV2, meta: { title: 'Tax Summary Report', permission: 'accounting_tax_report' } },
             { path: 'meeting/dashboard', name: 'meeting-dashboard', component: MeetingDashboard, meta: { title: 'Meeting Dashboard', permission: 'meeting' } },
             { path: 'meeting/details/:id(\\d+)', name: 'meeting-details', component: MeetingDetails, meta: { title: 'Meeting Details', permission: 'meeting' } },
@@ -752,7 +750,7 @@ const routes = [
             { path: 'settings/appearance', name: 'appearance-settings', component: AppearanceSettings, meta: { title: 'Appearance', permission: 'appearance_settings' } },
             { path: 'settings/sms', name: 'sms-settings', component: SmsSettings, meta: { title: 'SMS Settings', permission: 'sms_settings' } },
             { path: 'settings/languages', name: 'languages', component: Languages, meta: { title: 'Languages', permission: 'translations_settings' } },
-            { path: 'settings/translations/:locale', name: 'translations-view', component: TranslationsView, meta: { title: 'Translations', permission: 'translations_settings' } },
+            { path: 'settings/translations/:locale(ar|en)', name: 'translations-view', component: TranslationsView, meta: { title: 'Translations', permission: 'translations_settings' } },
             { path: 'settings/webhooks', name: 'webhooks', component: Webhooks, meta: { title: 'Webhooks', permission: 'webhooks_view' } },
             { path: 'settings/pos-receipt', name: 'pos-receipt', component: PosReceipt, meta: { title: 'POS Receipt', permission: 'pos_settings' } },
             { path: 'settings/modules', name: 'module-settings', component: ModuleSettings, meta: { title: 'Module Settings', permission: 'module_settings' } },

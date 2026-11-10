@@ -39,8 +39,7 @@ class PaystackService
 
     /**
      * Initialize a transaction and return the hosted checkout URL + the
-     * server-generated reference. Mirrors the SaaS gateway, including the
-     * unsupported_currency retry (drop currency → account default).
+     * server-generated reference in the requested currency.
      *
      * @return array{url: string, reference: string}
      */
@@ -64,16 +63,6 @@ class PaystackService
 
         $response = Http::withToken($this->secretKey())
             ->post('https://api.paystack.co/transaction/initialize', $payload);
-
-        // If the merchant's Paystack account doesn't support the requested
-        // currency, retry without it so Paystack uses the account default.
-        if (! $response->successful() && ($response->json('code') === 'unsupported_currency')) {
-            unset($payload['currency']);
-            $payload['metadata']['original_currency'] = strtoupper($currency);
-
-            $response = Http::withToken($this->secretKey())
-                ->post('https://api.paystack.co/transaction/initialize', $payload);
-        }
 
         if (! $response->successful() || ! $response->json('status')) {
             Log::error('Paystack transaction init failed', ['response' => $response->json()]);

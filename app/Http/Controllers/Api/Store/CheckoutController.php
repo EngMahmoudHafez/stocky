@@ -178,8 +178,7 @@ class CheckoutController extends BaseController
 
         \Stripe\Stripe::setApiKey($stripeSecret);
 
-        $currency = strtolower((string) (StoreSetting::query()->value('currency_code') ?: 'usd'));
-        $currency = substr(preg_replace('/[^a-z]/', '', $currency) ?: 'usd', 0, 3);
+        $currency = strtolower($this->storeCurrencyCode());
         $amountInCents = (int) round($breakdown['total'] * 100);
 
         try {
@@ -359,8 +358,8 @@ class CheckoutController extends BaseController
 
             // Charged amount must equal the server-computed total (anti-tamper).
             $expectedCents = (int) round($total * 100);
-            if ((int) $intent->amount !== $expectedCents) {
-                Log::warning("Checkout amount mismatch: intent {$intent->amount} vs expected {$expectedCents}");
+            if ((int) $intent->amount !== $expectedCents || strcasecmp($intent->currency, $this->storeCurrencyCode()) !== 0) {
+                Log::warning('Checkout payment amount or currency mismatch', ['intent_id' => $intent->id]);
 
                 return response()->json(['error' => __('messages.PaymentAmountMismatch')], 422);
             }
@@ -799,15 +798,9 @@ class CheckoutController extends BaseController
         return redirect()->route('store.thankyou', ['razorpay' => 'paid']);
     }
 
-    /**
-     * ISO currency code for gateway charges — same normalization as the
-     * Stripe path (store currency_code may hold a symbol; fall back to USD).
-     */
     private function storeCurrencyCode(): string
     {
-        $currency = strtolower((string) (StoreSetting::query()->value('currency_code') ?: 'usd'));
-
-        return strtoupper(substr(preg_replace('/[^a-z]/', '', $currency) ?: 'usd', 0, 3));
+        return \App\Models\Currency::RETAIL_CODE;
     }
 
     /**

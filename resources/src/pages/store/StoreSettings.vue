@@ -40,12 +40,13 @@
             </a-form-item>
           </a-col>
           <a-col :xs="24" :md="8">
-            <a-form-item :label="$t('Currency')" extra="⚠️ Changing currency will affect both system and online store">
-              <a-select
-                v-model:value="form.default_currency_id" :placeholder="$t('Choose_Currency')"
-                :options="currencies.map(c => ({ label: `${c.name} (${c.symbol})`, value: Number(c.id) }))"
-                show-search option-filter-prop="label"
-              />
+            <a-form-item :label="$t('Currency')">
+              <a-input value="EGP (ج.م)" readonly />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :md="8">
+            <a-form-item :label="$t('DefaultLanguage')">
+              <a-select v-model:value="form.language" :options="storeLanguages" />
             </a-form-item>
           </a-col>
           <a-col :xs="24" :md="8">
@@ -426,9 +427,11 @@ import PageHeader from '../../components/PageHeader.vue';
 import http from '../../lib/http';
 import { uploadForm } from '../../lib/upload';
 import { useAuthStore } from '../../stores/auth';
+import { SUPPORTED_LOCALES } from '../../i18n';
 
 const { t } = useI18n();
 const auth = useAuthStore();
+const storeLanguages = SUPPORTED_LOCALES.map(({ label, value }) => ({ label, value }));
 
 const QUICK_LINKS = [
   { to: '/store/shipping-methods', label: 'Shipping_Methods' },
@@ -450,7 +453,6 @@ const settings = ref({});
 const collections = ref([]);
 const homeRows = ref([]);
 const warehouses = ref([]);
-const currencies = ref([]);
 const productOptions = ref([]);
 const pendingCustomersCount = ref(0);
 const files = ref({});
@@ -475,7 +477,6 @@ const form = ref({
   default_warehouse_id: null,
   warehouse_ids: [],
   store_all_warehouses: true,
-  default_currency_id: null,
   contact_email: '',
   contact_phone: '',
   contact_address: '',
@@ -655,7 +656,6 @@ async function fetch() {
     const s = payload.settings ? payload.settings : payload;
     settings.value = s || {};
     warehouses.value = Array.isArray(payload.warehouses) ? payload.warehouses : [];
-    currencies.value = Array.isArray(payload.currencies) ? payload.currencies : [];
     pendingCustomersCount.value = payload.pending_customers_count || 0;
 
     const curated = Array.isArray(payload.curated_products) ? payload.curated_products : [];
@@ -696,9 +696,6 @@ async function fetch() {
       ? whIds.map(Number)
       : (merged.default_warehouse_id != null ? [merged.default_warehouse_id] : []);
 
-    if (merged.default_currency_id != null) merged.default_currency_id = Number(merged.default_currency_id);
-    else if (currencies.value.length) merged.default_currency_id = Number(currencies.value[0].id);
-    else merged.default_currency_id = null;
 
     form.value = merged;
 
@@ -754,8 +751,6 @@ async function save() {
     form.value.default_warehouse_id = (form.value.default_warehouse_id != null && form.value.default_warehouse_id !== '')
       ? Number(form.value.default_warehouse_id) : null;
     form.value.warehouse_ids = (form.value.warehouse_ids || []).map(Number);
-    form.value.default_currency_id = (form.value.default_currency_id != null && form.value.default_currency_id !== '')
-      ? Number(form.value.default_currency_id) : null;
 
     // 3) FormData: booleans 1/0, JSON fields stringified, null → ''
     const fd = new FormData();

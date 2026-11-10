@@ -555,7 +555,7 @@ export const MENU = [
         label: 'Accounting',
         permissions: ['expense_view', 'expense_add', 'deposit_view', 'deposit_add', 'account', 'transfer_money', 'accounting_dashboard', 'chart_of_accounts', 'journal_entries', 'trial_balance', 'accounting_profit_loss', 'balance_sheet', 'accounting_tax_report'],
         children: [
-            { label: 'dashboard', to: '/app/accounting-v2/dashboard', permissions: ['accounting_dashboard'] },
+            { label: 'Financial_Overview', to: '/app/accounting-v2/dashboard', permissions: ['accounting_dashboard'] },
             { label: 'Chart_of_Accounts_Title', to: '/app/accounting-v2/chart-of-accounts', permissions: ['chart_of_accounts'] },
             { label: 'Journal_Entries_Title', to: '/app/accounting-v2/journal-entries', permissions: ['journal_entries'] },
             { label: 'Trial_Balance_Title', to: '/app/accounting-v2/reports/trial-balance', permissions: ['trial_balance'] },
@@ -800,7 +800,6 @@ export const MENU = [
             { label: 'POS_Receipt', to: '/app/settings/pos_receipt', permissions: ['pos_settings'] },
             { label: 'update_settings', to: '/app/settings/update_settings', permissions: ['update_settings'] },
             { label: 'Payment_Gateway', to: '/app/settings/payment_gateway', permissions: ['payment_gateway'] },
-            { label: 'Currencies', to: '/app/settings/Currencies', permissions: ['currency'] },
             { label: 'Backup', to: '/app/settings/Backup', permissions: ['backup'] },
             { label: 'System_Health', to: '/app/settings/system_health', permissions: ['system_health_view'] },
             { label: 'Webhooks', to: '/app/settings/webhooks', permissions: ['webhooks_view'] },

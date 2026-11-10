@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Language;
 use App\Models\StoreSetting;
 use Closure;
 use Illuminate\Http\Request;
@@ -23,8 +24,8 @@ class EnsureStoreEnabled
             abort(404);
         }
 
-        if (! $request->session()->has('locale') && ! $request->cookie('locale')
-            && in_array($settings->language, ['en', 'fr', 'es', 'ar'], true)) {
+        if (! in_array($request->session()->get('locale') ?: $request->cookie('locale'), Language::SUPPORTED_LOCALES, true)
+            && in_array($settings->language, Language::SUPPORTED_LOCALES, true)) {
             app()->setLocale($settings->language);
         }
 

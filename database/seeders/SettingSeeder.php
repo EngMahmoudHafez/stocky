@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Currency;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,7 @@ class SettingSeeder extends Seeder
             [
                 'id' => 1,
                 'email' => 'admin@example.com',
-                'currency_id' => 1,
+                'currency_id' => Currency::retail()->id,
                 'client_id' => 1,
                 'sms_gateway' => 1,
                 'point_to_amount_rate' => 1,

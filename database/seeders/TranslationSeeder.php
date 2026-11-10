@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Language;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -35,6 +36,9 @@ class TranslationSeeder extends Seeder
 
         foreach ($files as $file) {
             $locale = pathinfo($file, PATHINFO_FILENAME); // 'en', 'ar', etc.
+            if (! in_array($locale, Language::SUPPORTED_LOCALES, true)) {
+                continue;
+            }
             $translations = require $file;
 
             foreach ($translations as $key => $value) {

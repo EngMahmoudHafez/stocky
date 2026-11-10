@@ -1,6 +1,6 @@
 <template>
   <div class="pos-scope">
-  <div class="pos-codecanyon" style="display: flex; flex-direction: column; height: 100vh; background: #f7f7fb; color: #1f1f2c; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden;">
+  <div class="pos-codecanyon" style="display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: #f7f7fb; color: #1f1f2c; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden;">
 
     <!-- ============================================================
          TOP TOOLBAR (desktop / tablet)
@@ -18,7 +18,7 @@
       <!-- Register status (text + OPEN/CLOSED pill) — sibling so it can wrap on its own row on mobile -->
       <div v-if="registerEnabled" class="pos-shell-register-status" style="display: inline-flex; align-items: center; gap: 10px;">
         <div style="font-size: 13px; font-weight: 600; color: #1f1f2c; white-space: nowrap;">
-          {{ $t('Register') || 'Register' }}<span v-if="currentRegister && currentRegister.id"> #{{ currentRegister.id }}</span>
+          {{ $i18n.locale === 'ar' ? 'الوردية' : 'Register' }}<span v-if="currentRegister && currentRegister.id"> #{{ currentRegister.id }}</span>
         </div>
         <button
           v-if="isOnline"
@@ -28,8 +28,8 @@
           style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit; text-transform: uppercase; cursor: pointer; border: 0;"
           :style="{ background: (currentRegister && currentRegister.status === 'open') ? '#eaf7ef' : '#fdecec', color: (currentRegister && currentRegister.status === 'open') ? '#1e7a44' : '#a83232' }">
           <span style="width: 6px; height: 6px; border-radius: 99px; background: currentColor;"></span>
-          <span v-if="currentRegister && currentRegister.status === 'open'">OPEN</span>
-          <span v-else>CLOSED</span>
+          <span v-if="currentRegister && currentRegister.status === 'open'">{{ $i18n.locale === 'ar' ? 'مفتوحة' : 'Open' }}</span>
+          <span v-else>{{ $i18n.locale === 'ar' ? 'مقفولة' : 'Closed' }}</span>
         </button>
       </div>
 
@@ -49,7 +49,7 @@
           <span class="pos-wh-trigger-icon-pulse" v-if="sale.warehouse_id"></span>
         </span>
         <span class="pos-wh-trigger-body">
-          <span class="pos-wh-trigger-eyebrow">{{ $t('Warehouse') || 'Warehouse' }}</span>
+          <span class="pos-wh-trigger-eyebrow">{{ $i18n.locale === 'ar' ? 'الفرع أو المخزن' : 'Warehouse' }}</span>
           <span class="pos-wh-trigger-label">{{ selectedWarehouseLabel }}</span>
         </span>
         <lucide-icon name="chevron-down" class="pos-wh-trigger-caret" />
@@ -507,6 +507,8 @@
         <div class="pos-shell-totals" style="border-top: 1px solid #e6e6ec; padding: 8px 12px; background: #f7f7fb;">
 
           <!-- Charges row — matches POS.html FieldNum (no uppercase, prefix/suffix inside box without borders) -->
+          <details v-if="details.length && currentUserPermissions?.includes('edit_tax_discount_shipping_sale')" class="pos-sale-options">
+            <summary>{{ $i18n.locale === 'ar' ? 'الخصم والضريبة والشحن' : 'Discount, tax and shipping' }}</summary>
           <div class="pos-shell-charges-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
             <label style="display: block;">
               <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #8d8da0; margin-bottom: 4px;">{{ $t('pos.Tax') }} %</div>
@@ -530,6 +532,8 @@
               </div>
             </label>
           </div>
+
+          </details>
 
           <!-- Points convert row -->
           <div
@@ -597,13 +601,13 @@
           </div>
 
           <!-- Promo code input -->
-          <div style="margin-top: 6px;">
-            <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #8d8da0; margin-bottom: 4px; text-transform: uppercase;">Promo code</div>
+          <details v-if="details.length" class="pos-sale-options">
+            <summary>{{ $i18n.locale === 'ar' ? 'كود الخصم' : 'Promo code' }}</summary>
             <div style="display: flex; gap: 6px; align-items: center;">
               <input
                 v-model="promotionCode"
                 type="text"
-                placeholder="Enter code"
+                :placeholder="$i18n.locale === 'ar' ? 'اكتب الكود' : 'Enter code'"
                 @keyup.enter="Apply_Promotion_Code"
                 style="flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid #e6e6ec; border-radius: 6px; background: #ffffff; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #1f1f2c; outline: none;"
               />
@@ -622,7 +626,7 @@
             <div v-if="promotionCodeStatus" :style="{ marginTop: '4px', fontSize: '10px', color: promotionCodeStatus === 'ok' ? '#1e7a44' : '#d64545' }">
               {{ promotionCodeMessage }}
             </div>
-          </div>
+          </details>
 
           <!-- Mobile-only Pay Now (matches mockup; desktop has its own pay bar at the bottom of the page) -->
           <button
@@ -645,27 +649,36 @@
         <!-- Search row (search input + Scanner button) -->
         <div class="pos-shell-search-row" style="padding: 4px 6px; display: flex; gap: 8px; align-items: center;">
           <div class="pos-shell-search-wrap" style="flex: 1; position: relative;">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #8d8da0; pointer-events: none;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="position: absolute; inset-inline-start: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #8d8da0; pointer-events: none;">
               <path d="M3 7V4h3M14 4h3v3M17 13v3h-3M6 16H3v-3"/><path d="M5 10h10"/>
             </svg>
             <input
               type="text"
               :placeholder="$t('Scan_Search_Product_by_Code_Name')"
+              ref="catalogSearch"
               v-model="search_input"
-              @keyup="search"
+              :aria-label="$t('Scan_Search_Product_by_Code_Name')"
+              autocomplete="off"
+              @input="search()"
+              @keydown.enter.prevent="search(true)"
+              @keydown.esc.stop="clearCatalogSearch"
               class="pos-shell-search-input"
-              style="width: 100%; height: 36px; padding: 0 12px 0 38px; background: #ffffff; border: 1px solid #e6e6ec; border-radius: 8px; font-size: 13px; color: #1f1f2c; outline: none; font-family: inherit; transition: border-color 120ms ease, box-shadow 120ms ease;"
+              style="width: 100%; height: 36px; padding-block: 0; padding-inline: 38px 12px; background: #ffffff; border: 1px solid #e6e6ec; border-radius: 8px; font-size: 13px; color: #1f1f2c; outline: none; font-family: inherit; transition: border-color 120ms ease, box-shadow 120ms ease;"
             />
-            <ul v-if="product_filter && product_filter.length" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none; background: #ffffff; border: 1px solid #e6e6ec; border-radius: 10px; box-shadow: 0 8px 24px rgba(20,20,40,0.08); max-height: 280px; overflow: auto; z-index: 10;">
-              <li
-                v-for="product_fil in product_filter"
-                :key="product_fil.id"
-                @mousedown="SearchProduct(product_fil)"
-                class="pos-shell-autocomplete-item"
-                style="padding: 8px 12px; font-size: 13px; color: #1f1f2c; cursor: pointer; border-radius: 6px;">
-                {{ getResultValue(product_fil) }}
+            <button v-if="search_input" type="button" class="pos-search-clear"
+              :aria-label="$t('Clear')" @click="clearCatalogSearch">
+              <lucide-icon name="x" />
+            </button>
+            <ul v-if="product_filter.length" class="pos-search-results">
+              <li v-for="product in product_filter" :key="product.id + ':' + product.code">
+                <button type="button" @click="SearchProduct(product)" class="pos-shell-autocomplete-item">
+                  {{ getResultValue(product) }}
+                </button>
               </li>
             </ul>
+            <div v-else-if="catalogSearchComplete && search_input.trim().length >= 2" class="pos-search-results pos-search-empty" role="status">
+              {{ $i18n.locale === 'ar' ? 'مفيش منتج متاح مطابق للبحث' : 'No matching in-stock product' }}
+            </div>
           </div>
           <!-- Scanner button (matches POS.html ghost lg button) -->
           <button @click="showModal" :title="$t('Scan')" class="pos-shell-action-btn" style="height: 36px; padding: 0 12px; background: transparent; color: #1f1f2c; border: 1px solid #e6e6ec; border-radius: 8px; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 120ms ease;">
@@ -3548,6 +3561,7 @@ export default {
       focused: false,
       timer:null,
       search_input:'',
+      catalogSearchComplete: false,
       product_filter:[],
       isLoading: true,
       load_product: true,
@@ -4605,7 +4619,7 @@ export default {
     onScan (decodedText, decodedResult) {
       const code = decodedText;
       this.search_input = code;
-      this.search();
+      this.search(true);
       this.$bvModal.hide('open_scan');
     },
 
@@ -6374,101 +6388,67 @@ export default {
     },
 
     // ==================== SEARCH METHODS ====================
-    search(){
-      if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = null;
+    clearCatalogSearch() {
+      this.search_input = '';
+      this.search();
+      this.$refs.catalogSearch?.focus();
+    },
+
+    search(submit = false) {
+      clearTimeout(this.timer);
+      this.catalogSearchComplete = false;
+      this.product_filter = [];
+      const term = this.search_input.trim().toLowerCase();
+      if (term.length < 2) return;
+      if (!this.sale.warehouse_id) {
+        if (submit) this.makeToast('warning', this.$t('SelectWarehouse'), this.$t('Warning'));
+        return;
       }
-      if (this.search_input.length < 2) {
-        return this.product_filter= [];
-      }
-      if (this.sale.warehouse_id != "" &&  this.sale.warehouse_id != null) {
-        this.timer = setTimeout(() => {
-
-          let barcode = this.search_input.trim();
-          let weight = null;
-          if (barcode.length === 13 && !isNaN(barcode)) {
-            // Play sound only if barcode scanning sound is enabled
-            if (this.pos_settings.barcode_scanning_sound) {
-              this.audio.play();
-            }
-            // Play sound only if barcode scanning sound is enabled
-            if (this.pos_settings.barcode_scanning_sound) {
-              this.audio.play();
-            }
-            let product = this.products_pos.find(prod =>
-              prod.code === barcode &&
-              (prod.product_type === 'is_service' || this.isOversellingAllowed || Number(prod.qte_sale || 0) > 0)
-            );
-            if (product) {
-              this.Check_Product_Exist(product, product.id, weight);
-              return;
-            }else{
-
-              let productCode = barcode.substring(0, 7);
-              let weight = parseFloat(barcode.substring(7, 12)) / 1000;
-              let product = this.products_pos.find(prod =>
-                prod.code === productCode &&
-                (prod.product_type === 'is_service' || this.isOversellingAllowed || Number(prod.qte_sale || 0) > 0)
-              );
-              if (product) {
-                // Play sound only if barcode scanning sound is enabled
-                if (this.pos_settings.barcode_scanning_sound) {
-                  this.audio.play();
-                }
-                // Ensure weight does not exceed available quantity (unless overselling is allowed)
-                const available = Number(product.qte_sale || 0);
-                if (!this.isOversellingAllowed && available > 0 && weight > available) {
-                  this.makeToast("warning", this.$t("LowStock"), this.$t("Warning"));
-                  weight = available;
-                }
-                product.quantity = weight;
-                this.Check_Product_Exist(product, product.id, weight);
-                return;
-              }
-            }
-
-            this.makeToast("danger", "Invalid product code scanned", this.$t("Error"));
-            this.search_input= '';
-            this.product_filter = [];
-          }
-          
-          const product_filter = this.products_pos.filter(product =>
-            this.productFitsVehicle(product) &&
-            (product.product_type === 'is_service' || this.isOversellingAllowed || Number(product.qte_sale || 0) > 0) &&
-            (product.code === this.search_input || String(product.barcode || '').includes(this.search_input))
-          );
-          if(product_filter.length === 1){
-            // Play sound only if barcode scanning sound is enabled
-            if (this.pos_settings.barcode_scanning_sound) {
-              this.audio.play();
-            }
-            this.Check_Product_Exist(product_filter[0], product_filter[0].id, weight = null);
-          }else {
-            this.product_filter = this.products_pos.filter(product => {
-              // Hide parts that do not fit the selected vehicle.
-              if (!this.productFitsVehicle(product)) return false;
-              // Hide out-of-stock products from search results unless overselling is allowed.
-              if (!this.isOversellingAllowed && product.product_type !== 'is_service' && Number(product.qte_sale || 0) <= 0) return false;
-              const name = String(product.name || '').toLowerCase();
-              const code = String(product.code || '').toLowerCase();
-              const barcodeStr = String(product.barcode || '').toLowerCase();
-              const term = this.search_input.toLowerCase();
-              return (
-                name.includes(term) ||
-                code.includes(term) ||
-                barcodeStr.includes(term)
-              );
-            });
-          }
-        }, 800);
+      if (submit) {
+        this.searchCatalog(term, true);
       } else {
-        this.makeToast(
-          "warning",
-          this.$t("SelectWarehouse"),
-          this.$t("Warning")
-        );
+        this.timer = setTimeout(() => this.searchCatalog(term, false), 300);
       }
+    },
+
+    searchCatalog(term, submit) {
+      const available = this.products_pos.filter(product =>
+        this.productFitsVehicle(product) &&
+        (product.product_type === 'is_service' || this.isOversellingAllowed || Number(product.qte_sale) > 0)
+      );
+      const matches = available.filter(product => this.catalogSearchFields(product).some(field => field.includes(term)));
+      const exact = matches.filter(product => this.catalogSearchFields(product).slice(0, 2).includes(term));
+      if (exact.length === 1) {
+        this.addScannedProduct(exact[0]);
+        return;
+      }
+      if (submit && matches.length === 1) {
+        this.addScannedProduct(matches[0]);
+        return;
+      }
+      if (!matches.length && /^\d{13}$/.test(term) && this.addWeightedBarcode(term, available)) return;
+      this.product_filter = matches;
+      this.catalogSearchComplete = true;
+    },
+
+    catalogSearchFields(product) {
+      return [product.code, product.barcode, product.name].map(field => String(field ?? '').toLowerCase());
+    },
+
+    addScannedProduct(product, weight = null) {
+      if (this.pos_settings.barcode_scanning_sound) this.audio.play().catch(() => {});
+      this.Check_Product_Exist(product, product.id, weight);
+    },
+
+    addWeightedBarcode(barcode, available) {
+      const product = available.find(entry => String(entry.code) === barcode.slice(0, 7));
+      if (!product) return false;
+      const requested = Number(barcode.slice(7, 12)) / 1000;
+      const weight = this.isOversellingAllowed ? requested : Math.min(requested, Number(product.qte_sale));
+      if (!(weight > 0)) return false;
+      if (weight < requested) this.makeToast('warning', this.$t('LowStock'), this.$t('Warning'));
+      this.addScannedProduct(product, weight);
+      return true;
     },
 
     Check_Product_Exist(product, id, weight = null) {
@@ -10018,6 +9998,50 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.pos-sale-options { margin-block: 8px; }
+.pos-sale-options summary { cursor: pointer; padding-block: 8px; font-weight: 600; }
+.pos-shell-search-wrap .pos-shell-search-input { padding-inline-end: 40px !important; }
+.pos-search-clear {
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #54546a;
+  cursor: pointer;
+}
+.pos-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline: 0;
+  z-index: 30;
+  max-height: 230px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid #e6e6ec;
+  border-radius: 8px;
+  background: #fff;
+}
+.pos-search-results .pos-shell-autocomplete-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1f1f2c;
+  text-align: start;
+  cursor: pointer;
+}
+.pos-search-results .pos-shell-autocomplete-item:hover,
+.pos-search-results .pos-shell-autocomplete-item:focus-visible { background: #f0ecfb; }
+.pos-search-empty { padding: 8px 12px; color: #54546a; }
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ============================================

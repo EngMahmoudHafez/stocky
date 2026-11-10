@@ -25,8 +25,9 @@ class SettingsApiController extends Controller
         $s = StoreSetting::first();
         $setting = \App\Models\Setting::first();
         $warehouses = Warehouse::whereNull('deleted_at')->get(['id', 'name']);
-        $currencies = Currency::whereNull('deleted_at')->get(['id', 'name', 'symbol']);
-        $default_currency_id = $setting?->Currency?->id ?? null;
+        $pound = Currency::retail();
+        $currencies = [$pound->only(['id', 'name', 'symbol'])];
+        $default_currency_id = $pound->id;
 
         if (! $s) {
             $s = StoreSetting::create([
@@ -38,7 +39,7 @@ class SettingsApiController extends Controller
                 'favicon_path' => 'images/store/favicon.ico',
                 'hero_image_path' => 'images/store/hero_image.jpg',
                 'language' => 'en',
-                'currency_code' => $default_currency_id,
+                'currency_code' => Currency::RETAIL_SYMBOL,
                 'default_warehouse_id' => $setting?->warehouse_id ?: (Warehouse::first()?->id ?? null),
                 'allow_overselling' => true,
                 'hide_out_of_stock' => false,
@@ -225,8 +226,7 @@ class SettingsApiController extends Controller
             'secondary_color' => 'nullable|string|max:20',
             'font_family' => 'nullable|string|max:100',
 
-            'language' => 'nullable|string|max:10',
-            'default_currency_id' => 'required|integer',
+            'language' => ['nullable', \Illuminate\Validation\Rule::in(\App\Models\Language::SUPPORTED_LOCALES)],
             'default_warehouse_id' => 'nullable|integer',
             'warehouse_ids' => 'nullable',
             'store_all_warehouses' => 'nullable|in:0,1',
@@ -397,18 +397,7 @@ class SettingsApiController extends Controller
         // CURRENCY HANDLING
         // ============================
 
-        if (! empty($data['default_currency_id'])) {
-            $currency = Currency::find($data['default_currency_id']);
-            if ($currency) {
-                $data['currency_code'] = $currency->symbol;
-
-                $setting = \App\Models\Setting::first();
-                if ($setting) {
-                    $setting->currency_id = $currency->id;
-                    $setting->save();
-                }
-            }
-        }
+        $data['currency_code'] = Currency::RETAIL_SYMBOL;
 
         // ============================
         // SAVE CHANGES

@@ -98,15 +98,20 @@ class PosController extends BaseController
             'warehouse_id' => 'required',
             'payments' => 'required|array|min:1',
             'payments.*.amount' => 'required|numeric',
-            'payments.*.payment_method_id' => 'required',
+            'payments.*.payment_method_id' => 'required|integer|exists:payment_methods,id',
         ]);
+
+        $payments = collect($request->payments);
+        $paymentMethodNames = PaymentMethod::whereIn('id', $payments->pluck('payment_method_id'))
+            ->pluck('name', 'id')
+            ->map(fn ($name) => strtolower(trim($name)));
 
         // Multi-Pack Selling: a pack line consumes pack_multiplier base units per
         // pack — reject if that would oversell (unless overselling is allowed).
         $this->assertPackStockSufficient($request);
 
         // Block overpayment if multiple methods used
-        $totalPaid = collect($request->payments)->sum('amount');
+        $totalPaid = $payments->sum('amount');
         if (count($request->payments) > 1 && $totalPaid > $request->GrandTotal) {
             return response()->json([
                 'message' => 'Total Paid Exceeds Grand Total',
@@ -117,8 +122,8 @@ class PosController extends BaseController
         // Wallet tender: verify the customer has enough balance before creating
         // the sale so we can return a clean 422 (the debit itself happens inside
         // the sale transaction below).
-        $walletPayTotal = (float) collect($request->payments)
-            ->filter(fn ($p) => (int) ($p['payment_method_id'] ?? 0) === 8 && (float) ($p['amount'] ?? 0) > 0)
+        $walletPayTotal = (float) $payments
+            ->filter(fn ($payment) => $paymentMethodNames->get($payment['payment_method_id']) === 'wallet' && $payment['amount'] > 0)
             ->sum('amount');
         if ($walletPayTotal > 0) {
             $walletService = app(\App\Services\WalletService::class);
@@ -172,7 +177,7 @@ class PosController extends BaseController
         $appliedPromotions = $promotionResult['applied'] ?? [];
 
         try {
-            $sale = \DB::transaction(function () use ($request, $totalPaid, $saleUuid, $promotionDiscount, $promotionCodeApplied, $appliedPromotions) {
+            $sale = \DB::transaction(function () use ($request, $totalPaid, $saleUuid, $promotionDiscount, $promotionCodeApplied, $appliedPromotions, $paymentMethodNames) {
                 $helpers = new helpers;
                 $user = Auth::user();
                 // New way: Check user's record_view field (user-level boolean)
@@ -357,6 +362,7 @@ class PosController extends BaseController
 
                 foreach ($request->payments as $index => $payment) {
                     if (isset($payment['amount']) && $payment['amount'] > 0) {
+                        $paymentMethodName = $paymentMethodNames->get($payment['payment_method_id']);
                         // Prefer per-line account selection; no global account fallback
                         $accountId = $payment['account_id'] ?? null;
 
@@ -370,10 +376,8 @@ class PosController extends BaseController
                             $changeReturn = $originalAmount - $request->GrandTotal;
                         }
 
-                        if ($payment['payment_method_id'] == 1 || $payment['payment_method_id'] == '1') {
-
-                            $helpers  = new helpers();
-                            $currency = strtolower($helpers->Get_Currency_Code() ?? 'usd');
+                        if ($paymentMethodName === 'credit card') {
+                            $currency = strtolower(\App\Models\Currency::RETAIL_CODE);
 
                             $client = Client::findOrFail($request->client_id);
                             \Stripe\Stripe::setApiKey(config('app.STRIPE_SECRET'));
@@ -420,7 +424,7 @@ class PosController extends BaseController
                                 // 3️⃣ Create & confirm PaymentIntent
                                 $intent = \Stripe\PaymentIntent::create([
                                     'amount' => (int) round($paymentAmount * 100),
-                                    'currency' => $currency, // usd or mxn
+                                    'currency' => $currency,
                                     'customer' => $customerStripeId,
                                     'payment_method' => $paymentMethodId,
                                     'confirm' => true,
@@ -464,7 +468,7 @@ class PosController extends BaseController
 
 
 
-                        if ($payment['payment_method_id'] == 1 || $payment['payment_method_id'] == '1') {
+                        if ($paymentMethodName === 'credit card') {
                             PaymentWithCreditCard::create([
                                 'customer_id' => $request->client_id,
                                 'payment_id' => $paymentSale->id,
@@ -474,7 +478,7 @@ class PosController extends BaseController
                         }
 
                         // Wallet tender: debit the customer's wallet balance.
-                        if ($payment['payment_method_id'] == 8 || $payment['payment_method_id'] == '8') {
+                        if ($paymentMethodName === 'wallet') {
                             $walletService = app(\App\Services\WalletService::class);
                             $wallet = $walletService->walletFor((int) $request->client_id);
                             $walletService->debit($wallet, $paymentAmount, 'pos_sale', [
@@ -1261,7 +1265,8 @@ class PosController extends BaseController
                     }
 
                     if ($request['amount'] > 0) {
-                        if ($request->payment['payment_method_id'] == 1 || $request->payment['payment_method_id'] == '1') {
+                        $paymentMethodName = PaymentMethod::whereKey($request->payment['payment_method_id'])->value('name');
+                        if (strtolower(trim((string) $paymentMethodName)) === 'credit card') {
 
                             $Client = Client::whereId($request->client_id)->first();
                             Stripe\Stripe::setApiKey(config('app.STRIPE_SECRET'));
@@ -1284,7 +1289,7 @@ class PosController extends BaseController
 
                                 $charge = \Stripe\Charge::create([
                                     'amount' => $request['amount'] * 100,
-                                    'currency' => 'usd',
+                                    'currency' => strtolower(\App\Models\Currency::RETAIL_CODE),
                                     'customer' => $customer->id,
                                 ]);
 
@@ -1303,7 +1308,7 @@ class PosController extends BaseController
 
                                 $charge = \Stripe\Charge::create([
                                     'amount' => $request['amount'] * 100,
-                                    'currency' => 'usd',
+                                    'currency' => strtolower(\App\Models\Currency::RETAIL_CODE),
                                     'customer' => $customer_id,
                                     'source' => $card->id,
                                 ]);
@@ -2159,7 +2164,7 @@ class PosController extends BaseController
         $pos_setting = PosSetting::where('deleted_at', '=', null)->first();
         $products_per_page = $pos_setting ? $pos_setting->products_per_page : 12;
         $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name']);
-        $languages_available = Language::where('is_active', true)->get(['name', 'locale', 'flag']);
+        $languages_available = Language::supported()->where('is_active', true)->get(['name', 'locale', 'flag']);
 
         return response()->json([
             // Company / receipt header info (used for POS receipt + offline printing fallback)

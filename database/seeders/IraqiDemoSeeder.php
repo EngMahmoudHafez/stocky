@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Currency;
 use App\Models\Role;
 use App\Models\ShippingMethod;
 use App\Models\StoreSetting;
@@ -118,7 +119,7 @@ class IraqiDemoSeeder extends Seeder
 
     private function configureAdministration(int $warehouseId, int $clientId): void
     {
-        $currencyId = DB::table('currencies')->insertGetId(['code' => 'EGP', 'name' => 'جنيه مصري', 'symbol' => 'ج.م']);
+        $currencyId = Currency::retail()->id;
         $disabledModules = ['recruit', 'meeting', 'EWallet', 'woocommerce_settings', 'shopify',
             'subscription_product', 'manufacturing', 'assets', 'projects', 'bookings', 'service', 'fleet',
             'hospital', 'school', '/realestate', '/products/vehicle-fitment', '/quotations', '/portal',
@@ -152,7 +153,7 @@ class IraqiDemoSeeder extends Seeder
     private function configureStore(int $warehouseId): void
     {
         StoreSetting::create([
-            'store_name' => self::BRAND, 'enabled' => true, 'language' => 'ar', 'currency_code' => 'ج.م',
+            'store_name' => self::BRAND, 'enabled' => true, 'language' => 'ar', 'currency_code' => Currency::RETAIL_SYMBOL,
             'default_warehouse_id' => $warehouseId, 'warehouse_ids' => [$warehouseId],
             'allow_overselling' => false, 'hide_out_of_stock' => true,
             'registration_enabled' => true, 'require_email_verification' => false,

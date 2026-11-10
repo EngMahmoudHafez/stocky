@@ -2,27 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Models\Currency;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CurrencySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    public function run(): void
     {
-        // Insert some stuff
-        DB::table('currencies')->insert(
-            [
-                'id' => 1,
-                'code' => 'USD',
-                'name' => 'US Dollar',
-                'symbol' => '$',
-            ]
-
+        Currency::whereNull('deleted_at')->firstOrCreate(
+            ['code' => Currency::RETAIL_CODE],
+            ['name' => 'جنيه مصري', 'symbol' => Currency::RETAIL_SYMBOL],
         );
     }
 }

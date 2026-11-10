@@ -177,10 +177,7 @@
                 </a-col>
                 <a-col :xs="24" :md="12">
                   <a-form-item :label="$t('DefaultCurrency')">
-                    <a-select
-                      v-model:value="setting.currency_id" show-search option-filter-prop="label"
-                      :options="currencies.map(c => ({ label: c.name + ' (' + c.code + ')', value: c.id }))"
-                    />
+                    <a-input value="EGP (ج.م)" readonly />
                   </a-form-item>
                 </a-col>
                 <a-col :xs="24" :md="12">
@@ -1032,7 +1029,6 @@ const currentSection = computed(() => ({
 
 const setting = ref({});
 const pos_settings = ref({});
-const currencies = ref([]);
 const clients = ref([]);
 const warehouses = ref([]);
 const accounts = ref([]);
@@ -1172,7 +1168,6 @@ async function save() {
   fd.append('warehouse', s.warehouse_id);
   fd.append('default_account', s.default_account_id || '');
   fd.append('default_payment_method', s.default_payment_method_id || '');
-  fd.append('currency', s.currency_id);
   fd.append('email', s.email);
   fd.append('logo', logoFile.value || s.logo);
   fd.append('CompanyName', s.CompanyName);
@@ -1359,7 +1354,6 @@ onMounted(() => {
   const main = http.get('get_Settings_data_api', { include_secrets: 1 })
     .then(data => {
       setting.value = { ...(data.settings || {}) };
-      currencies.value = data.currencies || [];
       clients.value = data.clients || [];
       warehouses.value = data.warehouses || [];
       accounts.value = data.accounts || [];

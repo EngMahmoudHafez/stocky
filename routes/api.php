@@ -77,7 +77,7 @@ Route::get('/translations/{locale}', function ($locale) {
         ->pluck('value', 'key');
 
     return response()->json($translations);
-});
+})->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES);
 
 Route::get('/languages', 'LanguageController@load_language');
 
@@ -257,20 +257,15 @@ Route::middleware(['auth:api', 'Is_Active', 'request.safety', 'token.timeout'])-
     Route::post('/update-customer-stripe', 'StripeController@updateCustomer');
 
     Route::get('/languages_setting', 'LanguageController@index');
-    Route::post('/languages_setting', 'LanguageController@store');
-    Route::put('/languages_setting/{language}', 'LanguageController@update');
-    Route::delete('/languages_setting/{language}', 'LanguageController@destroy');
     Route::post('/languages_setting/{id}/set-default', 'LanguageController@setDefault');
-    Route::post('/languages_setting/{id}/set-active', 'LanguageController@setLocaleActive');
-    Route::post('/languages_setting/set-default/{locale}', 'LanguageController@setDefaultByLocale');
+    Route::post('/languages_setting/set-default/{locale}', 'LanguageController@setDefaultByLocale')->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES);
 
     // Sync Vue i18n locale to Laravel session for Blade PDFs (no translations_settings permission required)
     Route::post('/sync-locale', 'LocaleSyncController@sync');
     
-    Route::get('/translations_setting/{locale}', 'LanguageController@get_translate');
-    Route::put('/translations_setting/{locale}', 'LanguageController@update_translate');
-    Route::put('/translations_setting/{locale}', 'LanguageController@updateOrInsert');
-    Route::delete('/translations_setting/{locale}/{key}', 'LanguageController@delete_translate');
+    Route::get('/translations_setting/{locale}', 'LanguageController@get_translate')->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES);
+    Route::put('/translations_setting/{locale}', 'LanguageController@updateOrInsert')->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES);
+    Route::delete('/translations_setting/{locale}/{key}', 'LanguageController@delete_translate')->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES);
 
     // -------------------------- Clear Cache ---------------------------
 
@@ -1102,9 +1097,7 @@ Route::middleware(['auth:api', 'Is_Active', 'request.safety', 'token.timeout'])-
     // ------------------------------- Currencies --------------------------\\
     // ------------------------------------------------------------------\\
 
-    Route::resource('currencies', 'CurrencyController');
-    Route::post('currencies/delete/by_selection', 'CurrencyController@delete_by_selection');
-    Route::post('currencies/{id}/set-default', 'CurrencyController@setDefault');
+    Route::resource('currencies', 'CurrencyController')->only(['index']);
 
     // ------------------------------- WAREHOUSES --------------------------\\
 

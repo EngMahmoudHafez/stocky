@@ -76,12 +76,10 @@ if ($installed === true) {
         Route::prefix('online_store')->group(function () {
 
             Route::get('/lang/{locale}', function ($locale) {
-                $supported = ['en', 'fr', 'es', 'ar'];
-                $chosen = in_array($locale, $supported, true) ? $locale : 'en';
-                session(['locale' => $chosen]);
-                Cookie::queue('locale', $chosen, 60 * 24 * 365, '/');
+                session(['locale' => $locale]);
+                Cookie::queue('locale', $locale, 60 * 24 * 365, '/');
                 return back();
-            })->name('lang.switch');
+            })->whereIn('locale', \App\Models\Language::SUPPORTED_LOCALES)->name('lang.switch');
 
             Route::get('/', [StoreFrontController::class, 'index'])->name('store.index');
             Route::get('/shop', [StoreFrontController::class, 'shop'])->name('store.shop');

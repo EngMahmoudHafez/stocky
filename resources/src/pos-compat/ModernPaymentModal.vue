@@ -73,7 +73,7 @@
                     </svg>
                   </div>
                   <div class="status-details">
-                    <span class="status-name">{{$t('Balance')}}</span>
+                    <span class="status-name">{{ $i18n.locale === 'ar' ? 'متبقي على العميل' : 'Remaining due' }}</span>
                     <span class="status-amount balance-text">{{ formatCurrency(balance) }}</span>
                   </div>
                 </div>
@@ -84,7 +84,7 @@
                     </svg>
                   </div>
                   <div class="status-details">
-                    <span class="status-name">{{$t('Change')}}</span>
+                    <span class="status-name">{{ $i18n.locale === 'ar' ? 'الباقي للعميل' : 'Change' }}</span>
                     <span class="status-amount change-text">{{ formatCurrency(changeReturn) }}</span>
                   </div>
                 </div>
@@ -198,7 +198,7 @@
                   </div>
 
                   <!-- Right: Vertical Quick Amounts -->
-                  <div class="quick-amount-rail">
+                  <div v-if="isSingleCashPayment" class="quick-amount-rail">
                     <div class="quick-amount-vertical">
                       <button
                         type="button"
@@ -207,7 +207,7 @@
                         :key="amt"
                         @click="setQuickAmount(amt)"
                       >
-                        {{ formatCurrency(amt) }}
+                        {{ amt === Number(paymentForm.amountDue) ? ($i18n.locale === 'ar' ? 'المبلغ بالضبط' : 'Exact amount') : formatCurrency(amt) }}
                       </button>
                     </div>
                   </div>
@@ -216,6 +216,8 @@
 
           
 
+              <details class="payment-extra-options">
+                <summary>{{ $i18n.locale === 'ar' ? 'التاريخ والملاحظات والإيصال' : 'Date, notes and receipt' }}</summary>
               <!-- Payment Date Only -->
               <div class="form-group">
                 <div class="input-field">
@@ -271,6 +273,7 @@
                 </div>
               </div>
 
+              </details>
         </form>
           </div>
         </div>
@@ -419,9 +422,8 @@ export default {
         ...m,
         icon: m.icon || this.getPaymentIcon(m)
       }));
-      const isCash = (m) => !!(m && m.name && m.name.toLowerCase().includes('cash'));
-      const cash = methods.filter(isCash);
-      const others = methods.filter(m => !isCash(m));
+      const cash = methods.filter(this.isCashMethod);
+      const others = methods.filter(method => !this.isCashMethod(method));
       return cash.concat(others);
     },
     resolvedAccounts() {
@@ -432,22 +434,17 @@ export default {
         const pm = this.resolvedPaymentMethods.find(m => String(m.id) === String(line.paymentMethodId));
         return this.isCreditCardMethod(pm);
       });
-    }
-    ,
+    },
+    isSingleCashPayment() {
+      if (this.paymentLines.length !== 1) return false;
+      const selected = this.resolvedPaymentMethods.find(method => String(method.id) === String(this.paymentLines[0].paymentMethodId));
+      return this.isCashMethod(selected);
+    },
     quickAmountOptions() {
-      const base = [this.paymentForm && this.paymentForm.amountDue, 15, 20, 50, 100, 200]
-        .map(v => Number(v))
-        .filter(v => Number.isFinite(v));
-      const seen = new Set();
-      const unique = [];
-      for (const v of base) {
-        const key = v.toFixed(this.priceDecimals);
-        if (!seen.has(key)) {
-          seen.add(key);
-          unique.push(parseFloat(key));
-        }
-      }
-      return unique;
+      const due = Number(this.paymentForm.amountDue);
+      if (due <= 0) return [];
+      const roundedTenders = [10, 50, 100, 200].map(note => Math.ceil(due / note) * note);
+      return [...new Set([due, ...roundedTenders])].sort((a, b) => a - b).slice(0, 4);
     }
   },
   methods: {
@@ -487,7 +484,7 @@ export default {
     },
     isWalletMethod(method) {
       if (!method) return false;
-      return String(method.id) === '8' || (method.name && method.name.trim().toLowerCase() === 'wallet');
+      return method.name?.trim().toLowerCase() === 'wallet';
     },
     isLineWallet(line) {
       if (!line) return false;
@@ -541,16 +538,17 @@ export default {
     },
     getPaymentIcon(method) {
       const name = ((method && method.name) || '').toLowerCase();
-      if (name.includes('cash')) return 'wallet';
+      if (this.isCashMethod({ name })) return 'wallet';
       if (name.includes('card') || name.includes('credit')) return 'credit-card';
       if (name.includes('bank') || name.includes('transfer')) return 'landmark';
       if (name.includes('cheque') || name.includes('check')) return 'file';
       return 'wallet';
     },
+    isCashMethod(method) {
+      return /cash|نقد|كاش/i.test(method?.name ?? '');
+    },
     getCashMethodId() {
-      const list = this.resolvedPaymentMethods || [];
-      const found = list.find(m => m && m.name && m.name.toLowerCase().includes('cash'));
-      return found ? found.id : null;
+      return this.resolvedPaymentMethods.find(this.isCashMethod)?.id ?? null;
     },
     getDefaultPaymentMethodId() {
       const id = this.defaultPaymentMethodId;
@@ -1271,6 +1269,9 @@ export default {
 </script>
 
 <style lang="scss">
+.payment-extra-options { margin-block: 12px; }
+.payment-extra-options summary { cursor: pointer; padding-block: 8px; font-weight: 600; }
+
 /* ========================================
    PREMIUM PAYMENT MODAL DESIGN
    ======================================== */

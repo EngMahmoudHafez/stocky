@@ -615,7 +615,7 @@ class StoreFrontController extends Controller
             ->filter()->values()->all();
         $metaDesc = trim(\Illuminate\Support\Str::limit(strip_tags((string) $product->note), 160))
             ?: ($product->name.' — '.($s->store_name ?? ''));
-        $currencyIso = optional(optional(\App\Models\Setting::first())->Currency)->name;
+        $currencyIso = \App\Models\Currency::RETAIL_CODE;
         $inStock = $this->productHasStock($product);
 
         $offer = [
