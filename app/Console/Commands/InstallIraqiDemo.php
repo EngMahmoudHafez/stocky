@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Passport\Passport;
 use RuntimeException;
 
 class InstallIraqiDemo extends Command
@@ -27,6 +28,9 @@ class InstallIraqiDemo extends Command
                 if (DB::table($table)->exists()) {
                     throw new RuntimeException("Table {$table} already has data. Installation stopped to protect it.");
                 }
+            }
+            if (! is_file(Passport::keyPath('oauth-private.key')) || ! is_file(Passport::keyPath('oauth-public.key'))) {
+                $this->runArtisan('passport:keys');
             }
             $this->runArtisan('db:seed', [
                 '--class' => 'Database\\Seeders\\IraqiDemoSeeder',

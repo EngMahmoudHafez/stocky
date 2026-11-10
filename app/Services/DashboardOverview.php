@@ -27,6 +27,8 @@ class DashboardOverview
 
     private readonly CarbonImmutable $start;
 
+    private readonly bool $canViewStockAlerts;
+
     public function __construct(User $user, int $days, ?int $warehouseId)
     {
         $this->warehouses = DB::table('warehouses')->whereNull('deleted_at')
@@ -39,6 +41,8 @@ class DashboardOverview
             ? $this->warehouses
             : $this->warehouses->where('id', $warehouseId)->values();
         $this->recordOwner = $user->hasRecordView() ? null : $user->id;
+        $this->canViewStockAlerts = $user->roles()->whereHas('permissions', fn ($query) => $query->where('name', 'Reports_quantity_alerts')
+        )->exists();
         $this->today = CarbonImmutable::today();
         $this->start = $this->today->subDays($days - 1);
     }
@@ -55,6 +59,8 @@ class DashboardOverview
             'range' => ['from' => $this->start->toDateString(), 'to' => $this->today->toDateString()],
             'updated_at' => CarbonImmutable::now()->toIso8601String(),
             'today' => $this->todayTotals($salesByDay, $purchasesByDay),
+            'period_summary' => $this->periodSummary($sales),
+            'low_stock' => $this->canViewStockAlerts ? $this->lowStock() : null,
             'branches' => $this->branchComparison($salesByDay, $purchasesByDay),
             'trend' => $this->trend($salesByDay, $purchasesByDay),
             'payments' => $this->payments(),
@@ -70,6 +76,34 @@ class DashboardOverview
             ->where("$table.statut", $status)
             ->when($this->recordOwner !== null, fn (Builder $query) => $query->where("$table.user_id", $this->recordOwner))
             ->whereBetween("$table.date", [$this->start->toDateString(), $this->today->toDateString()]);
+    }
+
+    private function periodSummary(Builder $sales): array
+    {
+        $totals = (clone $sales)->selectRaw('COUNT(*) AS invoices, COALESCE(SUM(GrandTotal), 0) AS sales,
+            COALESCE(SUM(CASE WHEN GrandTotal > COALESCE(paid_amount, 0)
+                THEN GrandTotal - COALESCE(paid_amount, 0) ELSE 0 END), 0) AS unpaid')->first();
+        $invoices = (int) $totals->invoices;
+
+        return [
+            'sales' => (float) $totals->sales,
+            'invoices' => $invoices,
+            'average_sale' => $invoices > 0 ? (float) $totals->sales / $invoices : 0,
+            'unpaid' => (float) $totals->unpaid,
+        ];
+    }
+
+    private function lowStock(): Collection
+    {
+        return $this->inWarehouses(DB::table('product_warehouse as stock'), 'stock.warehouse_id')
+            ->join('products', 'products.id', '=', 'stock.product_id')
+            ->join('warehouses', 'warehouses.id', '=', 'stock.warehouse_id')
+            ->leftJoin('product_variants as variants', 'variants.id', '=', 'stock.product_variant_id')
+            ->whereNull('stock.deleted_at')->whereNull('products.deleted_at')->whereNull('variants.deleted_at')
+            ->where('stock.manage_stock', 1)->whereColumn('stock.qte', '<=', 'products.stock_alert')
+            ->orderBy('stock.qte')->orderBy('stock.id')->limit(5)
+            ->get(['stock.id', 'products.name', 'variants.name as variant', 'warehouses.name as warehouse',
+                'stock.qte as quantity', 'products.stock_alert as threshold']);
     }
 
     private function inWarehouses(Builder $query, string $column): Builder

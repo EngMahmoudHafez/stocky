@@ -27,9 +27,32 @@
       </div>
     </header>
 
+    <nav v-if="quickActions.length" class="quick-actions" :aria-label="t('quickActions')">
+      <router-link v-for="action in quickActions" :key="action.key" :to="action.to" class="quick-action">
+        <component :is="action.icon" aria-hidden="true" />
+        <span>{{ t(action.key) }}</span>
+        <ArrowRightOutlined class="action-arrow" :class="{ 'action-arrow-rtl': locale === 'ar' }" aria-hidden="true" />
+      </router-link>
+    </nav>
+
     <a-alert v-if="loadFailed" type="error" show-icon :message="t('loadFailed')" />
     <a-spin v-else :spinning="loading">
       <div v-if="snapshot" class="overview-sections">
+        <section aria-labelledby="overview-period">
+          <div class="section-heading">
+            <h2 id="overview-period">{{ t('periodSummary') }}</h2>
+            <span>{{ periodLabel }}</span>
+          </div>
+          <div class="summary-grid period-grid">
+            <a-card v-for="metric in periodMetrics" :key="metric.key" size="small" class="summary-card period-card">
+              <component :is="metric.icon" class="summary-icon" aria-hidden="true" />
+              <div>{{ t(metric.key) }}</div>
+              <strong dir="auto">{{ metric.key === 'invoices' ? number(snapshot.period_summary[metric.key]) : money(snapshot.period_summary[metric.key]) }}</strong>
+              <small>{{ t(metric.hint) }}</small>
+            </a-card>
+          </div>
+        </section>
+
         <section aria-labelledby="overview-today">
           <div class="section-heading">
             <h2 id="overview-today">{{ t('today') }}</h2>
@@ -140,6 +163,27 @@
             <a-empty v-else :description="t('empty')" />
           </a-card>
         </div>
+
+        <a-card v-if="snapshot.low_stock !== null" :title="t('lowStock')">
+          <template #extra>
+            <router-link v-if="stockReportAllowed" to="/reports/quantity-alerts">{{ t('viewStockReport') }}</router-link>
+          </template>
+          <p class="card-description">{{ t('stockScope') }}</p>
+          <ul v-if="snapshot.low_stock.length" class="overview-list stock-list">
+            <li v-for="item in snapshot.low_stock" :key="item.id">
+              <span class="stock-warning"><WarningOutlined aria-hidden="true" /></span>
+              <div class="stock-description">
+                <strong>{{ item.name }}</strong>
+                <small>{{ [item.variant, item.warehouse].filter(Boolean).join(' · ') }}</small>
+              </div>
+              <div class="stock-quantity">
+                <strong>{{ t('units', { count: number(item.quantity) }) }}</strong>
+                <small>{{ t('stockThreshold', { count: number(item.threshold) }) }}</small>
+              </div>
+            </li>
+          </ul>
+          <a-empty v-else :description="t('stockHealthy')" />
+        </a-card>
       </div>
       <div v-else class="initial-loading" aria-hidden="true" />
     </a-spin>
@@ -149,11 +193,13 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { theme } from 'ant-design-vue';
-import { ReloadOutlined, ShoppingCartOutlined, ShoppingOutlined, RollbackOutlined, UndoOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, ShoppingCartOutlined, ShoppingOutlined, RollbackOutlined, UndoOutlined, ArrowRightOutlined, FileTextOutlined, CalculatorOutlined, WalletOutlined, SwapOutlined, WarningOutlined, ShopOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import http from '../lib/http';
 import { useAuthStore } from '../stores/auth';
 import { useFormat } from '../composables/useFormat';
+import { isEntryAllowed } from '../lib/saasAccess';
+import { moduleKeyForPath } from '../config/modules';
 
 const { t, locale } = useI18n({
   useScope: 'local',
@@ -194,6 +240,25 @@ const { t, locale } = useI18n({
       customerRevenue: 'ترتيب العملاء حسب إجمالي قيمة المبيعات.',
       recent: 'أحدث عمليات البيع',
       empty: 'لا توجد بيانات لهذا الاختيار.',
+      quickActions: 'اختصارات العمل',
+      newSale: 'فاتورة بيع جديدة',
+      pointOfSale: 'نقطة البيع',
+      onlineOrders: 'طلبات المتجر',
+      stockTransfers: 'تحويلات المخزون',
+      finance: 'الحسابات والتقارير',
+      viewStockReport: 'تقرير نواقص المخزون',
+      periodSummary: 'أداء الفترة المختارة',
+      invoices: 'فواتير البيع',
+      average_sale: 'متوسط الفاتورة',
+      unpaid: 'متبقي للتحصيل',
+      completedSalesHint: 'قيمة المبيعات المكتملة',
+      invoicesHint: 'عدد الفواتير المكتملة',
+      averageHint: 'المبيعات ÷ عدد الفواتير',
+      unpaidHint: 'المتبقي من فواتير الفترة',
+      lowStock: 'أصناف تحتاج متابعة',
+      stockScope: 'أقل خمسة أرصدة وصلت لحد التنبيه في الفروع المختارة. الأرصدة الحالية لا ترتبط بفترة المبيعات.',
+      stockThreshold: 'حد التنبيه: {count}',
+      stockHealthy: 'لا توجد أصناف عند حد التنبيه في الفروع المختارة.',
     },
     en: {
       title: 'Business overview',
@@ -230,6 +295,25 @@ const { t, locale } = useI18n({
       customerRevenue: 'Customers ranked by total sales value.',
       recent: 'Latest sales',
       empty: 'No data for this selection.',
+      quickActions: 'Quick actions',
+      newSale: 'New sales invoice',
+      pointOfSale: 'Point of sale',
+      onlineOrders: 'Online orders',
+      stockTransfers: 'Stock transfers',
+      finance: 'Accounts and reports',
+      viewStockReport: 'Low stock report',
+      periodSummary: 'Selected period at a glance',
+      invoices: 'Sales invoices',
+      average_sale: 'Average invoice',
+      unpaid: 'Awaiting collection',
+      completedSalesHint: 'Completed sales value',
+      invoicesHint: 'Completed invoices',
+      averageHint: 'Sales divided by invoice count',
+      unpaidHint: 'Unpaid balance on period invoices',
+      lowStock: 'Stock to follow up',
+      stockScope: 'Five lowest balances at or below their alert threshold in selected locations. Current stock is independent of the sales period.',
+      stockThreshold: 'Alert threshold: {count}',
+      stockHealthy: 'No items at the alert threshold in selected locations.',
     },
   },
 });
@@ -252,6 +336,27 @@ const dailyMetrics = [
   { key: 'sale_returns', icon: RollbackOutlined },
   { key: 'purchase_returns', icon: UndoOutlined },
 ];
+const periodMetrics = [
+  { key: 'sales', icon: ShoppingCartOutlined, hint: 'completedSalesHint' },
+  { key: 'invoices', icon: FileTextOutlined, hint: 'invoicesHint' },
+  { key: 'average_sale', icon: CalculatorOutlined, hint: 'averageHint' },
+  { key: 'unpaid', icon: WalletOutlined, hint: 'unpaidHint' },
+];
+const actionEntries = [
+  { key: 'newSale', to: '/sales/create', permissions: ['Sales_add'], icon: FileTextOutlined },
+  { key: 'pointOfSale', to: '/pos', permissions: ['Pos_view'], icon: ShoppingCartOutlined },
+  { key: 'onlineOrders', to: '/store/orders', permissions: ['Orders_view'], icon: ShopOutlined },
+  { key: 'stockTransfers', to: '/transfers', permissions: ['transfer_view'], icon: SwapOutlined },
+  { key: 'finance', to: '/accounting-v2/dashboard', permissions: ['accounting_dashboard'], icon: WalletOutlined },
+  { key: 'viewStockReport', to: '/reports/quantity-alerts', permissions: ['Reports_quantity_alerts'], icon: WarningOutlined },
+];
+function actionAllowed(action) {
+  return isEntryAllowed(action, auth)
+    && auth.moduleEnabled(moduleKeyForPath(action.to))
+    && auth.adminPathEnabled(action.to);
+}
+const quickActions = computed(() => actionEntries.filter(actionAllowed));
+const stockReportAllowed = computed(() => actionAllowed(actionEntries.find(action => action.key === 'viewStockReport')));
 const rankingKeys = ['products', 'categories', 'sizes', 'colors', 'materials', 'seasons', 'customers'];
 const trendKeys = ['sales', 'purchases'];
 const period = ref('month');
@@ -337,6 +442,12 @@ onUnmounted(() => window.clearInterval(refreshTimer));
   gap: 12px;
 }
 .overview-header { margin-bottom: 22px; flex-wrap: wrap; }
+.quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.quick-action { display: flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid var(--overview-line); border-radius: 10px; background: var(--overview-control-bg); color: var(--overview-text); transition: border-color 150ms, color 150ms; }
+.quick-action:hover { border-color: var(--overview-accent); color: var(--overview-accent); }
+.quick-action > .anticon:first-child { color: var(--overview-accent); }
+.action-arrow { font-size: 11px; opacity: .5; margin-inline-start: 10px; }
+.action-arrow-rtl { transform: rotate(180deg); }
 .overview-header h1 { font-size: clamp(21px, 2.4vw, 27px); margin: 0 0 3px; }
 .overview-header p, .section-heading span, .section-date, .card-description {
   color: var(--overview-muted);
@@ -369,6 +480,8 @@ onUnmounted(() => window.clearInterval(refreshTimer));
 .summary-card { min-width: 0; }
 .summary-card :deep(.ant-card-body) { display: grid; gap: 5px; }
 .summary-card strong { font-size: clamp(16px, 1.9vw, 22px); overflow-wrap: anywhere; }
+.period-card { border-top: 3px solid var(--overview-accent); }
+.period-card small { color: var(--overview-muted); }
 .summary-icon { color: var(--overview-accent); font-size: 17px; }
 .overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .trend-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
@@ -400,10 +513,18 @@ onUnmounted(() => window.clearInterval(refreshTimer));
 .ranking-list li, .recent-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; }
 .recent-list small { display: block; margin-top: 3px; color: var(--overview-muted); }
 .recent-amount { white-space: nowrap; }
+.stock-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.stock-list li + li { border-top: 1px solid var(--overview-line); }
+.stock-warning { color: #b77616; font-size: 21px; }
+.stock-description { flex: 1; min-width: 0; }
+.stock-list small { display: block; color: var(--overview-muted); margin-top: 3px; }
+.stock-quantity { text-align: end; }
 @media (max-width: 950px) {
   .overview-grid, .trend-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 580px) {
+  .quick-action { flex: 1 1 42%; min-width: 0; padding: 10px; font-size: 12px; }
+  .action-arrow { margin-inline-start: auto; }
   .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .branch-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; font-size: 13px; }
   .branch-header { display: none; }
