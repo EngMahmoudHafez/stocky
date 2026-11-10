@@ -17,27 +17,34 @@ class IraqiDemoSeeder extends Seeder
 {
     private const BRAND = 'براند العراقي';
 
-    private const OWNER_EMAIL = 'owner@iraqi.example';
+    private const OWNER_EMAIL = 'manager@iraqi.example';
 
     private const LOGO = 'iraqi-demo-mark.png';
 
     public function run(): void
     {
-        if (! app()->isLocal()) {
-            throw new RuntimeException('The Iraqi demo requires a local environment.');
+        $accounts = [
+            ['firstname' => 'محمد', 'lastname' => 'العراقي', 'username' => 'مدير العراقي', 'email' => self::OWNER_EMAIL, 'role' => 'Owner', 'label' => 'المدير', 'scope' => 'all'],
+            ['firstname' => 'ندى', 'lastname' => 'علي', 'username' => 'كاشير العراقي', 'email' => 'cashier@iraqi.example', 'role' => 'Cashier', 'label' => 'الكاشير', 'scope' => 'cashier'],
+            ['firstname' => 'يوسف', 'lastname' => 'حسن', 'username' => 'المدير المالي العراقي', 'email' => 'finance@iraqi.example', 'role' => 'Finance Manager', 'label' => 'المدير المالي', 'scope' => 'finance'],
+        ];
+        foreach ($accounts as &$account) {
+            $account['password'] = Str::password(20, symbols: false);
         }
+        unset($account);
+        $credentials = array_map(fn ($account) => [
+            'label' => $account['label'], 'email' => $account['email'], 'password' => $account['password'],
+        ], $accounts);
 
-        $password = Str::password(20, symbols: false);
-
-        DB::transaction(function () use ($password) {
+        DB::transaction(function () use (&$accounts) {
             foreach (['settings', 'users', 'products', 'warehouses', 'clients'] as $table) {
                 if (DB::table($table)->exists()) {
                     throw new RuntimeException('Import the clean demo schema into a new database before seeding.');
                 }
             }
 
-            $ownerId = $this->createOwner($password);
             $warehouseIds = $this->createWarehouses();
+            $ownerId = $this->createRoleAccounts($accounts, $warehouseIds);
             $clientIds = $this->createCustomers();
             $this->configureAdministration($warehouseIds[0], $clientIds[0]);
             $this->configureStore($warehouseIds[0]);
@@ -45,36 +52,49 @@ class IraqiDemoSeeder extends Seeder
         });
 
         Cache::forget('store_settings');
-        $this->command->info('Demo administrator: '.self::OWNER_EMAIL);
-        $this->command->info('Demo password: '.$password);
+        foreach ($credentials as $account) {
+            $this->command->line($account['label']." login: {$account['email']} / {$account['password']}");
+        }
     }
 
-    private function createOwner(string $password): int
+    private function createRoleAccounts(array &$accounts, array $warehouseIds): int
     {
-        $role = Role::create(['name' => 'Owner', 'label' => 'المالك والمدير العام', 'status' => 1]);
-        $this->assignOwnerPermissions($role);
-
-        $ownerId = DB::table('users')->insertGetId([
-            'firstname' => 'محمد', 'lastname' => 'العراقي', 'username' => 'محمد العراقي',
-            'email' => self::OWNER_EMAIL, 'password' => Hash::make($password), 'role_id' => $role->id,
-            'avatar' => 'no_avatar.png', 'phone' => '', 'is_all_warehouses' => 1, 'record_view' => 1,
-        ]);
-        DB::table('role_user')->insert(['user_id' => $ownerId, 'role_id' => $role->id]);
-
+        $ownerId = 0;
+        $permissions = DB::table('permissions')->whereNull('deleted_at')->pluck('id', 'name');
+        foreach ($accounts as &$account) {
+            $role = Role::create(['name' => $account['role'], 'label' => $account['label'], 'status' => 1]);
+            $allowed = match ($account['scope']) {
+                'all' => $permissions->values()->all(),
+                'cashier' => $this->permissionIds($permissions, ['Pos_view', 'Sales_add', 'payment_sales_add', 'Customers_view', 'products_view']),
+                'finance' => $this->permissionIds($permissions, ['Reports_', 'account', 'accounting_', 'payment_', 'deposit_', 'expense_', 'Sales_view', 'Purchases_view', 'Sale_Returns_view', 'Purchase_Returns_view']),
+            };
+            $role->permissions()->sync($allowed);
+            $userId = DB::table('users')->insertGetId([
+                'firstname' => $account['firstname'], 'lastname' => $account['lastname'], 'username' => $account['username'],
+                'email' => $account['email'], 'password' => Hash::make($account['password']), 'role_id' => $role->id,
+                'avatar' => 'no_avatar.png', 'phone' => '',
+                'is_all_warehouses' => in_array($account['scope'], ['all', 'finance'], true),
+                'record_view' => in_array($account['scope'], ['all', 'finance'], true),
+            ]);
+            DB::table('role_user')->insert(['user_id' => $userId, 'role_id' => $role->id]);
+            $userWarehouses = match ($account['scope']) {
+                'all', 'finance' => $warehouseIds,
+                default => [$warehouseIds[1]],
+            };
+            DB::table('user_warehouse')->insert(array_map(fn ($warehouseId) => [
+                'user_id' => $userId, 'warehouse_id' => $warehouseId,
+            ], $userWarehouses));
+            if ($account['scope'] === 'all') {
+                $ownerId = $userId;
+            }
+        }
+        unset($account);
         return $ownerId;
     }
 
-    private function assignOwnerPermissions(Role $role): void
+    private function permissionIds($permissions, array $prefixes): array
     {
-        $excludedPrefixes = '/^(hms_|school_|mrp_|fleet_|asset_|project_|service_|checklist_|customer_maintenance_|recruit_|meeting|shopify_|realestate_|kitchen_display_|serial_numbers|batch_|webhooks_|knowledge_base_|Quotations_|edit_.*_quotation)/i';
-        $excluded = ['assets', 'tasks', 'projects', 'bookings', 'trays', 'quickbooks_settings',
-            'woocommerce_settings', 'subscription_product', 'ewallet', 'report_warranty',
-            'expiry_report', 'Batch_Register_Report', 'view_batches', 'AI_Reports',
-            'sales_3d_dashboard', 'Subscribers_view'];
-
-        $permissionIds = DB::table('permissions')->whereNull('deleted_at')->pluck('id', 'name')
-            ->reject(fn ($id, $name) => preg_match($excludedPrefixes, $name) || in_array($name, $excluded, true));
-        $role->permissions()->attach($permissionIds->values()->all());
+        return $permissions->filter(fn ($id, $name) => collect($prefixes)->contains(fn ($prefix) => str_starts_with(strtolower($name), strtolower($prefix))))->values()->all();
     }
 
     private function createWarehouses(): array
