@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+@php
+    $loginLocale = $app_settings->default_language ?? app()->getLocale();
+@endphp
+<html lang="{{ $loginLocale }}" dir="{{ in_array($loginLocale, ['ar', 'he', 'fa', 'ur'], true) ? 'rtl' : 'ltr' }}">
   <head>
     <meta charset="utf-8" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -9,11 +12,11 @@
 
     {{-- PWA --}}
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#2f3640">
+    <meta name="theme-color" content="{{ $app_settings->login_bg_color ?? '#2f3640' }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ $app_settings->app_name ?? 'Inventory' }}">
-    <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png">
+    <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png?v={{ hash_file('sha256', public_path('pwa_images/pwa-icon-192.png')) }}">
 
     <title>{{ $app_settings->app_name ?? 'Inventory' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -599,6 +602,13 @@
     @if (!empty($app_settings->login_bg_color) && preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $app_settings->login_bg_color))
     <style>
       /* Admin-configured login background (Settings → Appearance → Login page) */
+      :root {
+        --primary: {{ $app_settings->login_bg_color }};
+        --primary-hover: {{ $app_settings->login_bg_color }};
+        --border-focus: {{ $app_settings->login_bg_color }};
+        --primary-light: color-mix(in srgb, {{ $app_settings->login_bg_color }} 15%, white);
+        --primary-glow: color-mix(in srgb, {{ $app_settings->login_bg_color }} 40%, transparent);
+      }
       .auth-hero {
         background: {{ $app_settings->login_bg_color }};
       }
@@ -689,22 +699,22 @@
             @csrf
 
             <div class="form-group">
-              <label class="form-label" for="email">Email address</label>
+              <label class="form-label" for="email">{{ __('messages.Email', [], $loginLocale) }}</label>
               <div class="input-wrapper">
                 <span class="input-icon">
                   <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 </span>
-                <input id="email" class="form-input" type="email" name="email" value="{{ old('email') }}" placeholder="you@company.com" required autofocus />
+                <input id="email" class="form-input" type="email" name="email" dir="ltr" value="{{ old('email') }}" placeholder="you@company.com" required autofocus />
               </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="password">Password</label>
+              <label class="form-label" for="password">{{ __('messages.Password', [], $loginLocale) }}</label>
               <div class="input-wrapper">
                 <span class="input-icon">
                   <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </span>
-                <input id="password" class="form-input" type="password" name="password" placeholder="Enter your password" required />
+                <input id="password" class="form-input" type="password" name="password" dir="ltr" placeholder="{{ __('messages.Password', [], $loginLocale) }}" required />
                 <button type="button" class="toggle-password" data-target="password" aria-label="Toggle password visibility">
                   <svg class="eye-open" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   <svg class="eye-closed" viewBox="0 0 24 24" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -715,9 +725,9 @@
             <div class="form-row">
               <label class="remember-check">
                 <input type="checkbox" name="remember">
-                Remember me
+                {{ __('messages.RememberMe', [], $loginLocale) }}
               </label>
-              <a class="forgot-link" href="{{ route('password.request') }}">Forgot password?</a>
+              <a class="forgot-link" href="{{ route('password.request') }}">{{ __('messages.ForgotPasswordQ', [], $loginLocale) }}</a>
             </div>
 
             <button type="submit" class="auth-btn" id="login_submit_btn">

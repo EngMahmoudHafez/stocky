@@ -6,6 +6,7 @@ use App\Models\Currency;
 use App\Models\Role;
 use App\Models\ShippingMethod;
 use App\Models\StoreSetting;
+use App\Support\IraqiBrand;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -15,11 +16,7 @@ use RuntimeException;
 
 class IraqiDemoSeeder extends Seeder
 {
-    private const BRAND = 'براند العراقي';
-
     private const OWNER_EMAIL = 'manager@iraqi.example';
-
-    private const LOGO = 'iraqi-demo-mark.png';
 
     public function run(): void
     {
@@ -146,18 +143,15 @@ class IraqiDemoSeeder extends Seeder
             '/store/invite-codes', '/store/quote-requests', '/store/popups'];
 
         DB::table('settings')->insert([
-            'email' => self::OWNER_EMAIL, 'CompanyName' => self::BRAND, 'company_name_ar' => self::BRAND,
+            ...IraqiBrand::administration(),
+            'email' => self::OWNER_EMAIL,
             'CompanyPhone' => '', 'CompanyAdress' => 'دمياط • الدقهلية، مصر',
-            'app_name' => self::BRAND, 'page_title_suffix' => 'إدارة الفروع والمتجر',
             'footer' => '© M.H · تنفيذ M.H', 'developed_by' => 'M.H',
-            'logo' => self::LOGO, 'favicon' => self::LOGO, 'default_language' => 'ar',
+            'default_language' => 'ar',
             'customize_button_visible' => 0,
-            'login_bg_color' => '#152b2b', 'login_footer_text' => '© M.H · تنفيذ M.H',
-            'login_hero_badge' => 'نظام تشغيل الفروع والمتجر', 'login_hero_title' => self::BRAND,
-            'login_hero_subtitle' => 'إدارة المبيعات والمخزون والطلبات من مكان واحد.',
+            'login_footer_text' => '© M.H · تنفيذ M.H',
             'login_hero_feature_1' => 'الزرقا', 'login_hero_feature_2' => 'المنصورة',
-            'login_hero_feature_3' => 'دمياط الجديدة', 'login_panel_title' => 'دخول الإدارة',
-            'login_panel_subtitle' => 'سجّل الدخول إلى لوحة تحكم براند العراقي.',
+            'login_hero_feature_3' => 'دمياط الجديدة',
             'login_btn_text' => 'تسجيل الدخول',
             'currency_id' => $currencyId, 'warehouse_id' => $warehouseId, 'client_id' => $clientId,
             'allow_overselling' => 0, 'module_flags' => json_encode(array_fill_keys($disabledModules, false)),
@@ -165,7 +159,7 @@ class IraqiDemoSeeder extends Seeder
         DB::table('languages')->where('is_default', true)->update(['is_default' => false]);
         DB::table('languages')->where('locale', 'ar')->update(['is_default' => true]);
         DB::table('pos_settings')->insert([
-            'note_customer' => 'شكراً لتسوقكم من براند العراقي', 'show_zatca_qr' => 0,
+            'note_customer' => 'شكراً لتسوقكم من العراقي | ELERAKY', 'show_zatca_qr' => 0,
             'allow_overselling' => 0, 'enable_customer_points' => 1,
         ]);
     }
@@ -173,21 +167,14 @@ class IraqiDemoSeeder extends Seeder
     private function configureStore(int $warehouseId): void
     {
         StoreSetting::create([
-            'store_name' => self::BRAND, 'enabled' => true, 'language' => 'ar', 'currency_code' => Currency::RETAIL_SYMBOL,
+            ...IraqiBrand::storefront(),
+            'enabled' => true, 'language' => 'ar', 'currency_code' => Currency::RETAIL_SYMBOL,
             'default_warehouse_id' => $warehouseId, 'warehouse_ids' => [$warehouseId],
             'allow_overselling' => false, 'hide_out_of_stock' => true,
             'registration_enabled' => true, 'require_email_verification' => false,
             'payment_cod_enabled' => true, 'payment_mobile_money_enabled' => false,
-            'primary_color' => '#347869', 'secondary_color' => '#a96a48',
-            'logo_path' => 'images/'.self::LOGO, 'favicon_path' => 'images/'.self::LOGO,
-            'hero_image_path' => 'images/store/iraqi-demo-hero.svg',
-            'hero_title' => 'أساسيات تلبسها كل يوم',
-            'hero_subtitle' => 'تشكيلة براند العراقي من التيشيرتات والقمصان والبناطيل. اختار اللون والمقاس المناسبين لك.',
-            'seo_meta_title' => 'براند العراقي | متجر الملابس',
-            'seo_meta_description' => 'اكتشف تشكيلة براند العراقي وتسوق بالمقاس واللون المتاحين.',
             'topbar_text_left' => 'الزرقا • المنصورة • دمياط الجديدة',
             'topbar_text_right' => 'الدفع عند الاستلام',
-            'footer_text' => 'براند العراقي • كتالوج تجريبي للعرض',
             'homepage_lineup' => [['type' => 'hero'], ['type' => 'collection', 'slug' => 'everyday-essentials'],
                 ['type' => 'collection', 'slug' => 'winter-layers']],
         ]);

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Collection;
 use App\Models\SizeGuide;
+use App\Support\IraqiBrand;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,7 @@ class IraqiDemoCatalogSeeder extends Seeder
     public function run(int $ownerId, array $warehouseIds, array $clientIds): void
     {
         $unitId = DB::table('units')->insertGetId(['name' => 'قطعة', 'ShortName' => 'قطعة']);
-        $brandId = DB::table('brands')->insertGetId(['name' => 'براند العراقي']);
+        $brandId = DB::table('brands')->insertGetId(['name' => IraqiBrand::NAME]);
         $collections = $this->createCollections();
         $guides = $this->createSizeGuides();
         $categories = [];

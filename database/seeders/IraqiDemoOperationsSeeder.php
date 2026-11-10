@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Client;
 use App\Models\OnlineOrder;
 use App\Models\ShippingMethod;
+use App\Support\IraqiBrand;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -95,7 +96,7 @@ class IraqiDemoOperationsSeeder extends Seeder
 
     private function createStaff(int $ownerId): void
     {
-        $companyId = DB::table('companies')->insertGetId(['name' => 'براند العراقي', 'country' => 'مصر']);
+        $companyId = DB::table('companies')->insertGetId(['name' => IraqiBrand::NAME, 'country' => 'مصر']);
         $shiftId = DB::table('office_shifts')->insertGetId([
             'company_id' => $companyId, 'name' => 'وردية الفروع',
             ...array_fill_keys(['monday_in', 'tuesday_in', 'wednesday_in', 'thursday_in', 'friday_in', 'saturday_in', 'sunday_in'], '11:00'),

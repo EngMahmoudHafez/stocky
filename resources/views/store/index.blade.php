@@ -64,7 +64,7 @@
             </div>
             <div class="relative">
               <div class="rounded-xl overflow-hidden shadow-lg border border-line-subtle">
-                <img class="w-full h-auto object-cover max-h-[420px]" src="{{ $heroUrl }}" alt="Hero">
+                <img class="w-full h-auto object-contain max-h-[420px]" src="{{ $heroUrl }}" alt="{{ $s->store_name ?? __('messages.Store') }}">
               </div>
             </div>
           </div>

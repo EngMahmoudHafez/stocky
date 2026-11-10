@@ -12,11 +12,11 @@
 
     {{-- PWA: manifest + theme + apple touch icon. Pure addition, no effect on existing behavior. --}}
     <link rel="manifest" href="/manifest.webmanifest">
-    <meta name="theme-color" content="#2f3640">
+    <meta name="theme-color" content="{{ $app_settings->login_bg_color ?? '#2f3640' }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ $app_settings->app_name ?? 'Inventory' }}">
-    <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png">
+    <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png?v={{ hash_file('sha256', public_path('pwa_images/pwa-icon-192.png')) }}">
 
     <title>{{ $app_settings->app_name ?? 'Inventory' }}</title>
 

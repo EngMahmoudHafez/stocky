@@ -45,8 +45,9 @@
                   ? (Str::startsWith($avatar, ['http://','https://','/']) ? $avatar : asset($avatar))
                   : null;
 
-  $cssStore = asset('js/storefront.css') . '?v=' . @filemtime(public_path('js/storefront.css'));
-  $jsStore  = asset('js/storefront.min.js') . '?v=' . @filemtime(public_path('js/storefront.min.js'));
+  // Content versions bypass stale asset responses even when deployments preserve timestamps.
+  $cssStore = asset('js/storefront.css') . '?v=' . hash_file('sha256', public_path('js/storefront.css'));
+  $jsStore  = asset('js/storefront.min.js') . '?v=' . hash_file('sha256', public_path('js/storefront.min.js'));
 
   $rtlLocales = ['ar','he','fa','ur'];
   $isRtl = in_array(app()->getLocale(), $rtlLocales);
@@ -58,6 +59,7 @@
       return hexdec(substr($hex,0,2)) . ' ' . hexdec(substr($hex,2,2)) . ' ' . hexdec(substr($hex,4,2));
   };
   $accent500Rgb = $hexToRgbTriplet($primary);
+  $accent400Rgb = $hexToRgbTriplet($secondary);
 
   $modalRegEnabled = $s->registration_enabled ?? true;
   $modalInviteRequired = $s->require_invite_code ?? false;
@@ -187,7 +189,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="{{ $s->store_name ?? 'Store' }}">
-  <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png">
+  <link rel="apple-touch-icon" href="/pwa_images/pwa-icon-192.png?v={{ hash_file('sha256', public_path('pwa_images/pwa-icon-192.png')) }}">
 
   {{-- Fonts — Inter (body) + JetBrains Mono (specs/prices) --}}
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -201,6 +203,8 @@
   <style>
     :root {
       --color-accent-500: {{ $accent500Rgb }};
+      --color-accent-400: {{ $accent400Rgb }};
+      --color-accent-600: {{ $accent500Rgb }};
       --color-accent-glow: rgba({{ $accent500Rgb }}, 0.35);
     }
     .dark { --color-accent-glow: rgba({{ $accent500Rgb }}, 0.45); }
@@ -247,8 +251,9 @@
         {{-- Logo --}}
         <a href="{{ route('store.index') }}" class="flex items-center gap-2 shrink-0">
           @if(!empty($s->logo_path))
-            <img src="{{ $assetPath($s->logo_path) }}" alt="{{ $s->store_name ?? 'Store' }}"
+            <img src="{{ $assetPath($s->logo_path) }}" alt=""
                  class="h-9 max-w-[160px] object-contain">
+            <span class="font-bold text-lg">{{ $s->store_name }}</span>
           @else
             <span class="font-bold text-lg tracking-tight">{{ $s->store_name ?? __('messages.Store') }}</span>
           @endif
@@ -628,6 +633,7 @@
           <div class="flex items-center gap-2 mb-3">
             @if(!empty($s->logo_path))
               <img src="{{ $assetPath($s->logo_path) }}" alt="" class="h-8 max-w-[140px] object-contain">
+              <span class="font-bold text-lg">{{ $s->store_name }}</span>
             @else
               <span class="font-bold text-lg tracking-tight">{{ $s->store_name ?? __('messages.Store') }}</span>
             @endif

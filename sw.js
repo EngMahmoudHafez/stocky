@@ -18,7 +18,7 @@
  */
 
 // Bump this when deploying changes so old caches are purged.
-const VERSION = 'stocky-pwa-v6';
+const VERSION = 'inventory-pwa-v8';
 const STATIC_CACHE = `${VERSION}-static`;
 const SHELL_CACHE = `${VERSION}-shell`;
 

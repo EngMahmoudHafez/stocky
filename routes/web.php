@@ -37,7 +37,10 @@ Route::domain('{tenant}.localhost')->get('/', function () {
 Route::get('password/find/{token}', 'PasswordResetController@find');
 
 Route::get('manifest.webmanifest', function () {
-    $appName = optional(\App\Models\Setting::first())->app_name ?: 'Inventory';
+    $settings = \App\Models\Setting::first();
+    $appName = $settings?->app_name ?: 'Inventory';
+    $locale = $settings?->default_language ?: 'en';
+    $iconVersion = hash_file('sha256', public_path('pwa_images/pwa-icon-192.png'));
     $shortName = trim(explode('|', $appName)[0]);
     if ($shortName === '') $shortName = $appName;
 
@@ -50,14 +53,14 @@ Route::get('manifest.webmanifest', function () {
         'display' => 'standalone',
         'orientation' => 'any',
         'background_color' => '#ffffff',
-        'theme_color' => '#2f3640',
-        'lang' => 'en',
-        'dir' => 'ltr',
+        'theme_color' => $settings?->login_bg_color ?: '#2f3640',
+        'lang' => $locale,
+        'dir' => in_array($locale, ['ar', 'he', 'fa', 'ur'], true) ? 'rtl' : 'ltr',
         'icons' => [
-            ['src' => '/pwa_images/pwa-icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-            ['src' => '/pwa_images/pwa-icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-            ['src' => '/pwa_images/pwa-icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
-            ['src' => '/pwa_images/pwa-icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+            ['src' => '/pwa_images/pwa-icon-192.png?v='.$iconVersion, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+            ['src' => '/pwa_images/pwa-icon-512.png?v='.$iconVersion, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+            ['src' => '/pwa_images/pwa-icon-192.png?v='.$iconVersion, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
+            ['src' => '/pwa_images/pwa-icon-512.png?v='.$iconVersion, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
         ],
     ];
 
