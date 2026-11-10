@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Services\CatalogAttributes;
 use App\Models\Collection;
 use App\Models\FlashSale;
 use App\Models\Product;
@@ -317,6 +318,7 @@ class StoreFrontController extends Controller
         $maxPrice = $request->get('max');
         $sort = $request->get('sort', 'latest');   // latest|price_asc|price_desc
         $coll = $request->get('collection');       // id or slug
+        $catalogFilters = CatalogAttributes::filters($request);
 
         // 1) Subquery: MIN(variant.price) per product
         $minVariantSub = DB::table('product_variants')
@@ -364,10 +366,12 @@ class StoreFrontController extends Controller
                 DB::raw("$finalExpr AS final_display_price")   // <= final price for filter/sort/UI
             );
 
-        if ($s->hide_out_of_stock && ($storeWarehouseIds = $s->activeWarehouseIds())) {
+        $storeWarehouseIds = $s->activeWarehouseIds();
+        if ($s->hide_out_of_stock && $storeWarehouseIds) {
             $inStockIds = $this->getInStockProductIds($storeWarehouseIds);
             $productsQuery->whereIn('products.id', $inStockIds);
         }
+        CatalogAttributes::filterProducts($productsQuery, $catalogFilters, $s->hide_out_of_stock && $storeWarehouseIds ? $storeWarehouseIds : null);
 
         // Vehicle Fitment: with a vehicle selected, only compatible (or
         // universal) parts are listed.
@@ -472,6 +476,8 @@ class StoreFrontController extends Controller
             'max' => $maxPrice,
             'sort' => $sort,
             'collection' => $coll,
+            'catalogFilters' => $catalogFilters,
+            'catalogOptions' => CatalogAttributes::options(storefront: true),
             'showCategoryBar' => true,
         ]);
     }
@@ -540,10 +546,11 @@ class StoreFrontController extends Controller
             ->where('products.hide_from_online_store', 0)
             ->where('products.id', (int) $id)
             ->with([
-                'variants:id,product_id,name,price,image,code',
+                'variants' => fn ($variants) => $variants->whereNull('deleted_at')->select('id', 'product_id', 'name', 'price', 'image', 'code', 'color', 'size'),
                 'images:id,product_id,image_path,is_main,sort_order',
                 'brand:id,name,description,image',
-                'category:id,name',
+                'category:id,name,size_guide_id',
+                'category.sizeGuide:id,name,image,columns,rows,status',
                 'subCategory:id,name',
                 'sizeGuide:id,name,image,columns,rows,status',
             ])
@@ -561,6 +568,8 @@ class StoreFrontController extends Controller
         if (! $product) {
             abort(404);
         }
+
+        $sizeGuide = $product->sizeGuide?->status ? $product->sizeGuide : $product->category?->sizeGuide;
 
         $bundle = collect([$product]);
         $this->applyDisplayPrices($bundle, $defaultTaxRate);
@@ -658,6 +667,7 @@ class StoreFrontController extends Controller
         return view('store.product', [
             's' => $s,
             'product' => $product,
+            'sizeGuide' => $sizeGuide?->status ? $sizeGuide : null,
             'related' => $related,
             'reviewStats' => $reviewStats,
             'inWishlist' => $inWishlist,

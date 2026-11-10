@@ -15,7 +15,13 @@ class Category extends Model
         'code',
         'name',
         'icon',
+        'size_guide_id',
     ];
+
+    public function sizeGuide()
+    {
+        return $this->belongsTo(SizeGuide::class);
+    }
 
     public function subcategories()
     {

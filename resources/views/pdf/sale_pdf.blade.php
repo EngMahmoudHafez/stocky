@@ -407,5 +407,8 @@
             <p style="font-size: 10pt; font-weight: bold; color: {{ $pdfT['primary_color'] }}; margin: 0; letter-spacing: 0.3px;">{{ $pdfT['labels']['thank_you'] !== '' ? $pdfT['labels']['thank_you'] : __('pdf.thank_you') }}</p>
         </div>
     </div>
+<div style="font-size: 7pt; color: #6b7280; text-align: center; margin-top: 8px;">
+    @include('partials.brand-credit')
+</div>
 </body>
 </html>

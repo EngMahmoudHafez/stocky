@@ -58,6 +58,9 @@
           />
         </a-col>
       </a-row>
+      <div style="margin-top: 12px">
+        <CatalogFilters v-model="catalogFilters" :options="crud.payload.value?.catalog_options" @update:model-value="crud.reload()" />
+      </div>
       <div class="tb-bar">
         <a-segmented v-model:value="view" :options="VIEW_OPTIONS" class="tb-view">
           <template #label="{ value, label }">
@@ -261,6 +264,7 @@ import {
   AppstoreOutlined, UnorderedListOutlined,
 } from '@ant-design/icons-vue';
 import PageHeader from '../../components/PageHeader.vue';
+import CatalogFilters from '../../components/CatalogFilters.vue';
 import DataTable from '../../components/DataTable.vue';
 import ProductFitmentDrawer from '../../components/ProductFitmentDrawer.vue';
 import { useCrudTable, PAGE_SIZE_OPTIONS, buildPageSizeOptionText } from '../../composables/useCrudTable';
@@ -278,7 +282,9 @@ const filters = ref({
   code: '', name: '', category_id: undefined, brand_id: undefined, warehouse_id: undefined,
 });
 
+const catalogFilters = ref({});
 const filterParams = () => ({
+  ...catalogFilters.value,
   code: filters.value.code || '',
   name: filters.value.name || '',
   category_id: filters.value.category_id || '',

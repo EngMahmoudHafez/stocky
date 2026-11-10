@@ -4,7 +4,7 @@
 @php
   $currency   = $s->currency_code ?? '$';
   $total      = $products->total();
-  $hasFilters = filled($q ?? null) || filled($cat ?? null) || filled($collection ?? null) || filled($min ?? null) || filled($max ?? null);
+  $hasFilters = $catalogFilters || filled($q ?? null) || filled($cat ?? null) || filled($collection ?? null) || filled($min ?? null) || filled($max ?? null);
 @endphp
 
 {{-- ===== Top bar ===== --}}

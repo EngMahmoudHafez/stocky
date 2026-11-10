@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\SizeGuide;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategorieController extends BaseController
 {
@@ -29,7 +31,7 @@ class CategorieController extends BaseController
             $sortField = 'id';
         }
 
-        $query = Category::query()
+        $query = Category::with('sizeGuide:id,name')
             ->whereNull('deleted_at')
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($qq) use ($search) {
@@ -59,6 +61,7 @@ class CategorieController extends BaseController
         return response()->json([
             'categories' => $categories,
             'totalRows' => $totalRows,
+            'size_guides' => SizeGuide::where('status', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -73,13 +76,10 @@ class CategorieController extends BaseController
             'name' => 'required|string|max:190',
             'code' => 'required|string|max:190',
             'icon' => 'nullable|string|max:64',
+            'size_guide_id' => ['nullable', 'integer', Rule::exists('size_guides', 'id')->whereNull('deleted_at')],
         ]);
 
-        $category = Category::create([
-            'code' => $validated['code'],
-            'name' => $validated['name'],
-            'icon' => $validated['icon'] ?? null,
-        ]);
+        $category = Category::create($validated);
 
         return response()->json([
             'success'  => true,
@@ -108,13 +108,10 @@ class CategorieController extends BaseController
             'name' => 'required|string|max:190',
             'code' => 'required|string|max:190',
             'icon' => 'nullable|string|max:64',
+            'size_guide_id' => ['nullable', 'integer', Rule::exists('size_guides', 'id')->whereNull('deleted_at')],
         ]);
 
-        Category::whereId($id)->update([
-            'code' => $validated['code'],
-            'name' => $validated['name'],
-            'icon' => $validated['icon'] ?? null,
-        ]);
+        Category::findOrFail($id)->update($validated + ['icon' => null]);
 
         return response()->json(['success' => true]);
     }

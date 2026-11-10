@@ -19,7 +19,7 @@ class Product extends Model
         'is_preorder', 'preorder_always', 'preorder_available_date', 'preorder_limit', 'preorder_note',
         'is_batch_tracked', 'shelf_life_days', 'generic_name', 'strength', 'dosage_form',
         'pack_size', 'manufacturer', 'prescription_required', 'drug_schedule',
-        'tags', 'faqs', 'size_guide_id',
+        'tags', 'faqs', 'size_guide_id', 'material', 'season',
     ];
 
     protected $casts = [

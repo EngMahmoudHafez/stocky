@@ -18,13 +18,15 @@ class IraqiDemoCatalogSeeder extends Seeder
         $categories = [];
         $stock = [];
 
-        foreach ($this->styles() as [$code, $name, $category, $collection, $cost, $price, $colors]) {
+        foreach ($this->styles() as [$code, $name, $category, $collection, $cost, $price, $colors, $material]) {
             $categoryId = $categories[$category] ??= DB::table('categories')->insertGetId([
                 'code' => 'IQ-C'.(count($categories) + 1), 'name' => $category,
+                'size_guide_id' => $guides[$category],
             ]);
             $product = [
                 'code' => 'IQ-'.$code, 'name' => $name, 'category_id' => $categoryId, 'brand_id' => $brandId,
-                'cost' => $cost, 'price' => $price, 'unit_id' => $unitId, 'size_guide_id' => $guides[$category],
+                'cost' => $cost, 'price' => $price, 'unit_id' => $unitId,
+                'material' => $material, 'season' => $collection === 'winter' ? 'شتاء 2026' : 'أساسيات 2026',
             ];
             $variants = $this->createStyle($product, $colors);
             $collections[$collection]->products()->attach($variants[0]['product_id']);
@@ -37,11 +39,11 @@ class IraqiDemoCatalogSeeder extends Seeder
     private function styles(): array
     {
         return [
-            ['TEE', 'تيشيرت قطن بيسك', 'تيشيرتات', 'everyday', 170, 349, ['BLK' => 'أسود', 'CRM' => 'أوف وايت']],
-            ['SHT', 'قميص أوكسفورد', 'قمصان', 'everyday', 260, 579, ['BLU' => 'أزرق فاتح', 'WHT' => 'أبيض']],
-            ['CHN', 'بنطلون تشينو', 'بناطيل', 'everyday', 315, 649, ['SND' => 'بيج', 'NVY' => 'كحلي']],
-            ['HDY', 'هودي قطن بسوستة', 'هوديز', 'winter', 330, 749, ['GRN' => 'زيتي', 'GRY' => 'رمادي']],
-            ['JKT', 'جاكيت جينز', 'جواكت', 'winter', 475, 999, ['IND' => 'أزرق جينز', 'CHR' => 'فحمي']],
+            ['TEE', 'تيشيرت قطن بيسك', 'تيشيرتات', 'everyday', 170, 349, ['BLK' => 'أسود', 'CRM' => 'أوف وايت'], 'قطن'],
+            ['SHT', 'قميص أوكسفورد', 'قمصان', 'everyday', 260, 579, ['BLU' => 'أزرق فاتح', 'WHT' => 'أبيض'], 'قطن أوكسفورد'],
+            ['CHN', 'بنطلون تشينو', 'بناطيل', 'everyday', 315, 649, ['SND' => 'بيج', 'NVY' => 'كحلي'], 'قطن تشينو'],
+            ['HDY', 'هودي قطن بسوستة', 'هوديز', 'winter', 330, 749, ['GRN' => 'زيتي', 'GRY' => 'رمادي'], 'قطن'],
+            ['JKT', 'جاكيت جينز', 'جواكت', 'winter', 475, 999, ['IND' => 'أزرق جينز', 'CHR' => 'فحمي'], 'دنيم'],
         ];
     }
 
@@ -101,6 +103,7 @@ class IraqiDemoCatalogSeeder extends Seeder
             foreach (['S', 'M', 'L', 'XL'] as $size) {
                 $variantId = DB::table('product_variants')->insertGetId([
                     'product_id' => $productId, 'name' => $color.' / '.$size, 'image' => $filename,
+                    'color' => $color, 'size' => $size,
                     'code' => $product['code'].'-'.$colorCode.'-'.$size,
                     'cost' => $product['cost'], 'price' => $product['price'],
                     'wholesale' => $product['price'] - 50, 'min_price' => $product['price'] - 75,

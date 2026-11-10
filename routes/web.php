@@ -37,7 +37,7 @@ Route::domain('{tenant}.localhost')->get('/', function () {
 Route::get('password/find/{token}', 'PasswordResetController@find');
 
 Route::get('manifest.webmanifest', function () {
-    $appName = optional(\App\Models\Setting::first())->app_name ?: 'Stocky';
+    $appName = optional(\App\Models\Setting::first())->app_name ?: 'Inventory';
     $shortName = trim(explode('|', $appName)[0]);
     if ($shortName === '') $shortName = $appName;
 

@@ -687,7 +687,7 @@
       </div>
 
       <div class="mt-10 pt-6 border-t border-line-subtle flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-fg-muted">
-        <span>© {{ date('Y') }} {{ $s->store_name ?? __('messages.Store') }}. {{ __('messages.AllRightsReserved') }}</span>
+        @include('partials.brand-credit')
         <div class="flex items-center gap-3">
           @if($s->cookie_consent_enabled ?? true)
             <button type="button" class="text-fg-secondary hover:text-accent-500" onclick="window.openCookieSettings && window.openCookieSettings()">{{ __('messages.CookieSettings') }}</button>

@@ -157,13 +157,15 @@ class DashboardOverview
         $lines = (clone $sales)->join('sale_details as details', 'details.sale_id', '=', 'sales.id')
             ->join('products', 'products.id', '=', 'details.product_id')
             ->leftJoin('units', 'units.id', '=', 'details.sale_unit_id');
-        $variants = $this->rankVariantAttributes($lines);
+        $variants = (clone $lines)->join('product_variants as variants', 'variants.id', '=', 'details.product_variant_id');
 
         return [
             'products' => $this->rankUnits($lines, 'products.id', 'products.name'),
             'categories' => $this->rankUnits((clone $lines)->join('categories', 'categories.id', '=', 'products.category_id'), 'categories.id', 'categories.name'),
-            'sizes' => $variants['sizes'],
-            'colors' => $variants['colors'],
+            'sizes' => $this->rankAttribute($variants, 'variants.size'),
+            'colors' => $this->rankAttribute($variants, 'variants.color'),
+            'materials' => $this->rankAttribute($lines, 'products.material'),
+            'seasons' => $this->rankAttribute($lines, 'products.season'),
             'customers' => (clone $sales)->join('clients', 'clients.id', '=', 'sales.client_id')
                 ->select('clients.name')->selectRaw('SUM(sales.GrandTotal) AS value')
                 ->groupBy('clients.id', 'clients.name')->orderByDesc('value')->orderBy('clients.name')->limit(self::RANKING_LIMIT)->get(),
@@ -173,35 +175,12 @@ class DashboardOverview
     private function rankUnits(Builder $lines, string $key, string $label): Collection
     {
         return (clone $lines)->select("$label as name")->selectRaw('SUM('.self::SOLD_UNITS.') AS value')
-            ->groupBy($key, $label)->orderByDesc('value')->orderBy($label)->limit(self::RANKING_LIMIT)->get();
+            ->groupBy(...array_unique([$key, $label]))->orderByDesc('value')->orderBy($label)->limit(self::RANKING_LIMIT)->get();
     }
 
-    private function rankVariantAttributes(Builder $lines): array
+    private function rankAttribute(Builder $lines, string $column): Collection
     {
-        $variants = (clone $lines)->join('product_variants as variants', 'variants.id', '=', 'details.product_variant_id')
-            ->whereNotNull('variants.name')->select('variants.name')
-            ->selectRaw('SUM('.self::SOLD_UNITS.') AS units')->groupBy('variants.name')->get();
-        $sizes = [];
-        $colors = [];
-
-        foreach ($variants as $variant) {
-            // Variant names with an explicit separator can be ranked without guessing from legacy labels.
-            if (preg_match('/^\s*(.+?)\s+\/\s+(.+?)\s*$/u', $variant->name, $parts)) {
-                [, $color, $size] = $parts;
-                $colors[$color] = ($colors[$color] ?? 0) + (float) $variant->units;
-                $sizes[$size] = ($sizes[$size] ?? 0) + (float) $variant->units;
-            }
-        }
-
-        return ['sizes' => $this->topAttributes($sizes), 'colors' => $this->topAttributes($colors)];
-    }
-
-    private function topAttributes(array $counts): Collection
-    {
-        ksort($counts);
-
-        return collect($counts)->sortDesc()->take(self::RANKING_LIMIT)
-            ->map(fn ($units, $name) => ['name' => (string) $name, 'value' => $units])->values();
+        return $this->rankUnits((clone $lines)->whereNotNull($column)->where($column, '<>', ''), $column, $column);
     }
 
     private function recentSales(Builder $sales): Collection

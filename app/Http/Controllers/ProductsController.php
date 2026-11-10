@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\Adjustment;
 use App\Models\AdjustmentDetail;
 use App\Models\Category;
+use App\Services\CatalogAttributes;
 use App\Models\SubCategory;
 use App\Models\CombinedProduct;
 use App\Models\CountStock;
@@ -131,6 +132,8 @@ class ProductsController extends BaseController
             });
         }
 
+        CatalogAttributes::filterProducts($filtered, CatalogAttributes::filters($request));
+
         // Optional status filter: status=1 (active), status=0 (inactive)
         if ($request->filled('status') && $request->status !== '') {
             $status = $request->status;
@@ -190,6 +193,8 @@ class ProductsController extends BaseController
             // Variant products list the parent code first and every variant code
             // under it; other types leave this empty.
             $item['variant_codes'] = [];
+            $item['material'] = $product->material;
+            $item['season'] = $product->season;
             $item['category'] = optional($product->category)->name;
             $item['sub_category'] = optional($product->subCategory)->name;
             $item['categories_display'] = $product->categories->isNotEmpty()
@@ -330,6 +335,7 @@ class ProductsController extends BaseController
             'categories' => $categories,
             'subcategories' => $subcategories,
             'brands' => $brands,
+            'catalog_options' => CatalogAttributes::options(),
             'products' => $data,
             'totalRows' => $totalRows,
         ]);
@@ -404,11 +410,51 @@ class ProductsController extends BaseController
         }
     }
 
+    private function prepareCatalogVariants(Request $request): void
+    {
+        if ($request->input('type') !== 'is_variant') {
+            return;
+        }
+
+        $input = $request->input('variants');
+        $variants = is_string($input) ? json_decode($input, true) : $input;
+        if (! is_array($variants)) {
+            return;
+        }
+
+        Validator::make(['variants' => $variants], [
+            'variants.*' => 'array',
+            'variants.*.color' => 'nullable|string|max:100',
+            'variants.*.size' => 'nullable|string|max:100',
+        ])->validate();
+
+        foreach ($variants as &$variant) {
+            $fields = $this->catalogVariantFields($variant);
+            $variant = array_replace($variant, $fields);
+            $attributes = array_filter($fields, fn ($value) => $value !== null);
+            if ($attributes) {
+                $variant['text'] = implode(' / ', $attributes);
+            }
+        }
+        unset($variant);
+
+        $request->merge(['variants' => is_string($input) ? json_encode($variants, JSON_UNESCAPED_UNICODE) : $variants]);
+    }
+
+    private function catalogVariantFields(array $variant): array
+    {
+        return array_map(
+            fn ($value) => filled($value) ? trim($value) : null,
+            array_intersect_key($variant, array_flip(CatalogAttributes::VARIANT_FIELDS))
+        );
+    }
+
     // -------------- Store new  Product  ---------------\\
 
     public function store(Request $request)
     {
         $this->authorizeForUser($request->user('api'), 'create', Product::class);
+        $this->prepareCatalogVariants($request);
 
         try {
 
@@ -432,6 +478,9 @@ class ProductsController extends BaseController
                 ],
                 'Type_barcode' => 'required',
                 'gtin' => 'nullable|string|max:64',
+                'material' => 'nullable|string|max:100',
+                'season' => 'nullable|string|max:100',
+                'size_guide_id' => ['nullable', 'integer', Rule::exists('size_guides', 'id')->whereNull('deleted_at')],
                 'category_id' => 'required',
                 'type' => 'required',
                 'tax_method' => 'required',
@@ -602,6 +651,8 @@ class ProductsController extends BaseController
                 $Product->tags = $this->normalizeTags($request->input('tags'));
                 $Product->faqs = $this->normalizeFaqs($request->input('faqs'));
                 $Product->size_guide_id = $request->input('size_guide_id') ? (int) $request->input('size_guide_id') : null;
+                $Product->material = $request->input('material');
+                $Product->season = $request->input('season');
                 $Product->TaxNet = $request['TaxNet'] ? $request['TaxNet'] : 0;
                 $Product->tax_method = $request['tax_method'];
                 $Product->discount = $request['discount'] ? $request['discount'] : 0;
@@ -768,6 +819,8 @@ class ProductsController extends BaseController
                         $row = [
                             'product_id' => $Product->id,
                             'name' => $variant->text,
+                            'color' => $variant->color ?? null,
+                            'size' => $variant->size ?? null,
                             'cost' => $variant->cost,
                             'price' => $variant->price,
                             'code' => $variant->code,
@@ -981,6 +1034,7 @@ class ProductsController extends BaseController
     {
 
         $this->authorizeForUser($request->user('api'), 'update', Product::class);
+        $this->prepareCatalogVariants($request);
         try {
 
             // define validation rules for product
@@ -1003,6 +1057,9 @@ class ProductsController extends BaseController
                     'regex:/^[^<>]*$/', // prevents <script>, <details>, etc.
                 ],
                 'gtin' => 'nullable|string|max:64',
+                'material' => 'nullable|string|max:100',
+                'season' => 'nullable|string|max:100',
+                'size_guide_id' => ['nullable', 'integer', Rule::exists('size_guides', 'id')->whereNull('deleted_at')],
                 'category_id' => 'required',
                 'tax_method' => 'required',
                 'discount_method' => 'required',
@@ -1181,7 +1238,7 @@ class ProductsController extends BaseController
                 $Product->note = $request['note'];
                 $Product->tags = $this->normalizeTags($request->input('tags'));
                 $Product->faqs = $this->normalizeFaqs($request->input('faqs'));
-                $Product->size_guide_id = $request->input('size_guide_id') ? (int) $request->input('size_guide_id') : null;
+                $Product->fill($request->only(['size_guide_id', 'material', 'season']));
                 $Product->points = $request['points'];
 
                 // ——— Warranty & Guarantee Tracking ———
@@ -1442,6 +1499,7 @@ class ProductsController extends BaseController
                             $ProductVariantUP['image'] = $variantImageName;
 
                             if (! in_array($new_variants_id[$key], $old_variants_id)) {
+                                $ProductVariantDT->fill($this->catalogVariantFields($variant));
                                 $ProductVariantDT->save();
 
                                 // --Store Product warehouse
@@ -1460,7 +1518,7 @@ class ProductsController extends BaseController
                                     product_warehouse::insert($product_warehouse);
                                 }
                             } else {
-                                ProductVariant::where('id', $variant['id'])->update($ProductVariantUP);
+                                ProductVariant::where('id', $variant['id'])->update($ProductVariantUP + $this->catalogVariantFields($variant));
                             }
                         }
 
@@ -1489,6 +1547,7 @@ class ProductsController extends BaseController
                                     ? $variant['image']
                                     : 'no-image.png');
                             $ProductVarDT->name = $variant['text'];
+                            $ProductVarDT->fill($this->catalogVariantFields($variant));
                             $ProductVarDT->cost = $variant['cost'];
                             $ProductVarDT->price = $variant['price'];
                             if (Schema::hasColumn('product_variants', 'wholesale')) {
@@ -2518,7 +2577,8 @@ class ProductsController extends BaseController
 
         $this->authorizeForUser($request->user('api'), 'create', Product::class);
 
-        $categories = Category::whereNull('deleted_at')->get(['id', 'name']);
+        $categories = Category::with(['sizeGuide' => fn ($query) => $query->where('status', true)->select('id', 'name')])
+            ->get(['id', 'name', 'size_guide_id']);
         $subcategories = SubCategory::orderBy('name')->get(['id', 'name', 'category_id']);
         $brands = Brand::where('deleted_at', null)->get(['id', 'name']);
         $size_guides = \App\Models\SizeGuide::where('deleted_at', null)->where('status', 1)->orderBy('name')->get(['id', 'name']);
@@ -2761,6 +2821,8 @@ class ProductsController extends BaseController
         $item['tags'] = is_array($Product->tags) ? $Product->tags : [];
         $item['faqs'] = is_array($Product->faqs) ? $Product->faqs : [];
         $item['size_guide_id'] = $Product->size_guide_id;
+        $item['material'] = $Product->material;
+        $item['season'] = $Product->season;
 
         $firstimage = explode(',', $Product->image);
         $item['image'] = $firstimage[0];
@@ -2776,6 +2838,8 @@ class ProductsController extends BaseController
                 $variant_item['var_id'] = $var_id += 1;
                 $variant_item['id'] = $variant->id;
                 $variant_item['text'] = $variant->name;
+                $variant_item['color'] = $variant->color;
+                $variant_item['size'] = $variant->size;
                 $variant_item['code'] = $variant->code;
                 $variant_item['gtin'] = $variant->gtin ?? '';
                 $variant_item['image'] = $variant->image ?: 'no-image.png';
@@ -2885,7 +2949,8 @@ class ProductsController extends BaseController
         }
 
         $data = $item;
-        $categories = Category::where('deleted_at', null)->get(['id', 'name']);
+        $categories = Category::with(['sizeGuide' => fn ($query) => $query->where('status', true)->select('id', 'name')])
+            ->get(['id', 'name', 'size_guide_id']);
         $all_subcategories = SubCategory::orderBy('name')->get(['id', 'name', 'category_id']);
         $brands = Brand::where('deleted_at', null)->get(['id', 'name']);
         $size_guides = \App\Models\SizeGuide::where('deleted_at', null)->where('status', 1)->orderBy('name')->get(['id', 'name']);

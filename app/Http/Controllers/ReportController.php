@@ -6006,7 +6006,7 @@ class ReportController extends BaseController
         ];
         $data = [];
 
-        $sale_details_data = SaleDetail::with('product', 'sale', 'sale.client', 'sale.warehouse')
+        $sale_details_data = SaleDetail::with('product', 'variant', 'sale', 'sale.client', 'sale.warehouse')
             ->where(function ($query) use ($view_records) {
                 if (! $view_records) {
                     return $query->whereHas('sale', function ($q) {
@@ -6069,6 +6069,7 @@ class ReportController extends BaseController
                 });
             });
 
+        \App\Services\CatalogAttributes::filterSales($sale_details_Filtred, \App\Services\CatalogAttributes::filters($request));
         $totalRows = $sale_details_Filtred->count();
         if ($perPage == '-1') {
             $perPage = $totalRows;
@@ -6096,14 +6097,12 @@ class ReportController extends BaseController
                 $unit = null;
             }
 
-            if ($detail->product_variant_id) {
-                $productsVariants = ProductVariant::where('product_id', $detail->product_id)
-                    ->where('id', $detail->product_variant_id)->first();
-
-                $product_name = '[' . $productsVariants->name . ']' . $detail['product']['name'];
-            } else {
-                $product_name = $detail['product']['name'];
-            }
+            $product_name = $detail->variant ? '[' . $detail->variant->name . '] ' . $detail->product->name : $detail->product->name;
+            $item['id'] = $detail->id;
+            $item['color'] = $detail->variant?->color;
+            $item['size'] = $detail->variant?->size;
+            $item['material'] = $detail->product->material;
+            $item['season'] = $detail->product->season;
 
             $item['date'] = $detail->date;
             $item['Ref'] = $detail['sale']->Ref;
@@ -6136,6 +6135,7 @@ class ReportController extends BaseController
         return response()->json([
             'totalRows' => $totalRows,
             'sales' => $data,
+            'catalog_options' => \App\Services\CatalogAttributes::options(),
             'customers' => $customers,
             'warehouses' => $warehouses,
         ]);

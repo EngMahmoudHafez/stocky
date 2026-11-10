@@ -68,7 +68,7 @@ class MailSettingsController extends BaseController
         }
 
         try {
-            Mail::raw('This is a test email to verify your mail configuration in Stocky.', function ($message) use ($to, $settings, $server) {
+            Mail::raw('This is a test email to verify your mail configuration.', function ($message) use ($to, $settings, $server) {
                 $message->to($to)
                     ->subject('Test Mail Configuration');
 
@@ -80,7 +80,7 @@ class MailSettingsController extends BaseController
                 if ($fromEmail) {
                     $fromName = ($server && $server->sender_name) 
                         ? $server->sender_name 
-                        : ($settings && $settings->CompanyName ? $settings->CompanyName : 'Stocky');
+                        : ($settings && $settings->CompanyName ? $settings->CompanyName : 'Inventory');
                     $message->from($fromEmail, $fromName);
                 }
             });

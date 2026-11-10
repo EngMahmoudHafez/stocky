@@ -65,7 +65,7 @@
         <div class="brand">
             <div class="brand-logo">S</div>
             <div>
-                <div class="brand-name">Stocky SaaS</div>
+                <div class="brand-name">Inventory</div>
                 <div class="brand-sub">Subscription Billing</div>
             </div>
         </div>
@@ -122,7 +122,7 @@
 
     <div class="footer">
         Thank you for your business!<br>
-        &copy; {{ date('Y') }} Stocky SaaS. All rights reserved.
+        @include('partials.brand-credit')
     </div>
 
 </div>

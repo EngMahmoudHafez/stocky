@@ -1,7 +1,7 @@
 {{-- Product size guide modal. Opened by #pdpSizeGuideBtn on the product page. --}}
-@if(isset($p) && $p->sizeGuide && $p->sizeGuide->status)
+@if($sizeGuide)
 @php
-  $sg = $p->sizeGuide;
+  $sg = $sizeGuide;
   $sgColumns = is_array($sg->columns) ? $sg->columns : [];
   $sgRows = is_array($sg->rows) ? $sg->rows : [];
 @endphp

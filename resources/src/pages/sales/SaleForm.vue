@@ -10,7 +10,7 @@
     </div>
 
     <a-form v-else layout="vertical">
-      <a-card size="small" style="margin-bottom: 16px">
+      <a-card size="small" :title="labels.header" style="margin-bottom: 16px">
         <a-row :gutter="16">
           <a-col :xs="24" :md="8">
             <a-form-item :label="$t('date')" required>
@@ -52,7 +52,7 @@
       </a-card>
 
       <!-- Product search + lines -->
-      <a-card size="small" style="margin-bottom: 16px">
+      <a-card size="small" :title="labels.items" style="margin-bottom: 16px">
         <div style="display: flex; gap: 8px; margin-bottom: 16px">
           <a-select
             v-model:value="searchValue"
@@ -147,8 +147,10 @@
 
       <a-row :gutter="16">
         <a-col :xs="24" :lg="14">
-          <a-card size="small" style="margin-bottom: 16px">
-            <a-row :gutter="12">
+          <details class="document-options">
+            <summary>{{ labels.options }}</summary>
+            <a-card size="small">
+              <a-row :gutter="12">
               <a-col :xs="24" :md="8">
                 <a-form-item :label="$t('OrderTax')">
                   <a-input-number
@@ -176,18 +178,6 @@
               <a-col :xs="12" :md="8">
                 <a-form-item :label="$t('Shipping')">
                   <a-input-number v-model:value="sale.shipping" style="width: 100%" :min="0" />
-                </a-form-item>
-              </a-col>
-              <a-col :xs="12" :md="8">
-                <a-form-item :label="$t('Status')">
-                  <a-select
-                    v-model:value="sale.statut"
-                    :options="[
-                      { value: 'completed', label: $t('complete') },
-                      { value: 'pending', label: $t('Pending') },
-                      { value: 'ordered', label: $t('Ordered') },
-                    ]"
-                  />
                 </a-form-item>
               </a-col>
               <a-col :xs="24" :md="8">
@@ -235,8 +225,9 @@
                   <a-textarea v-model:value="sale.notes" :rows="2" :placeholder="$t('Afewwords')" />
                 </a-form-item>
               </a-col>
-            </a-row>
-          </a-card>
+              </a-row>
+            </a-card>
+          </details>
 
           <!-- Payment (create + completed only, like legacy) -->
           <a-card v-if="!isEdit && sale.statut === 'completed'" size="small" :title="$t('Payment')" style="margin-bottom: 16px">
@@ -305,14 +296,24 @@
         </a-col>
 
         <a-col :xs="24" :lg="10">
-          <a-card size="small">
-            <div class="sum-row"><span>{{ $t('Total') }}</span><span>{{ money(totals.total) }}</span></div>
-            <div class="sum-row"><span>{{ $t('OrderTax') }}</span><span>{{ money(totals.TaxNet) }} ({{ Number(sale.tax_rate) || 0 }}%)</span></div>
-            <div class="sum-row">
+          <a-card size="small" :title="labels.summary">
+            <a-form-item :label="$t('Status')">
+              <a-select
+                v-model:value="sale.statut"
+                :options="[
+                  { value: 'completed', label: $t('complete') },
+                  { value: 'pending', label: $t('Pending') },
+                  { value: 'ordered', label: $t('Ordered') },
+                ]"
+              />
+            </a-form-item>
+            <div v-if="totals.total !== totals.GrandTotal" class="sum-row"><span>{{ labels.subtotal }}</span><span>{{ money(totals.total) }}</span></div>
+            <div v-if="totals.TaxNet" class="sum-row"><span>{{ $t('OrderTax') }}</span><span>{{ money(totals.TaxNet) }} ({{ Number(sale.tax_rate) || 0 }}%)</span></div>
+            <div v-if="totals.discountAmount" class="sum-row">
               <span>{{ $t('Discount') }}</span>
               <span style="color: #ff4d4f">- {{ money(totals.discountAmount) }}</span>
             </div>
-            <div class="sum-row"><span>{{ $t('Shipping') }}</span><span>{{ money(sale.shipping) }}</span></div>
+            <div v-if="Number(sale.shipping)" class="sum-row"><span>{{ $t('Shipping') }}</span><span>{{ money(sale.shipping) }}</span></div>
             <div class="sum-row grand"><span>{{ $t('Total') }}</span><span>{{ money(totals.GrandTotal) }}</span></div>
           </a-card>
 
@@ -324,7 +325,7 @@
             :disabled="(!isEdit && hasMinPriceViolation) || (sale.statut === 'completed' && hasBatchValidationErrors)"
             @click="submit"
           >
-            {{ $t('submit') }}
+            {{ labels.save }}
           </a-button>
           <div v-if="!isEdit && hasMinPriceViolation" class="form-warn">{{ $t('Price_below_min_not_allowed') }}</div>
           <div v-else-if="sale.statut === 'completed' && hasBatchValidationErrors" class="form-warn">
@@ -455,7 +456,14 @@ import { hasBatchSelectErrors, firstBatchSelectError } from '../../lib/batchVali
 import { resolveScan } from '../../lib/scanMatch';
 import http from '../../lib/http';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const labels = computed(() => locale.value === 'ar' ? {
+  header: 'بيانات البيع', items: 'الأصناف', summary: 'ملخص الفاتورة', subtotal: 'الإجمالي الفرعي',
+  options: 'الخصم والضريبة والشحن والملاحظات', save: 'حفظ البيع',
+} : {
+  header: 'Sale details', items: 'Items', summary: 'Invoice summary', subtotal: 'Subtotal',
+  options: 'Discount, tax, shipping and notes', save: 'Save sale',
+});
 const route = useRoute();
 const router = useRouter();
 const { money } = useFormat();
@@ -718,8 +726,8 @@ const lineColumns = computed(() => [
   { title: t('Net_Unit_Price'), key: 'net_price', align: 'right' },
   { title: t('Stock'), key: 'stock', align: 'right' },
   { title: t('Quantity'), key: 'quantity', align: 'center' },
-  { title: t('Discount'), key: 'discount', align: 'right' },
-  { title: t('Tax'), key: 'tax', align: 'right' },
+  ...(lines.value.some(line => Number(line.DiscountNet)) ? [{ title: t('Discount'), key: 'discount', align: 'right' }] : []),
+  ...(lines.value.some(line => Number(line.taxe)) ? [{ title: t('Tax'), key: 'tax', align: 'right' }] : []),
   { title: t('SubTotal'), key: 'subtotal', align: 'right' },
   { title: t('Action'), key: 'actions', width: 100, align: 'center' },
 ]);
@@ -1396,6 +1404,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.document-options { margin-bottom: 16px; }
+.document-options summary { padding: 12px 4px; font-weight: 600; cursor: pointer; }
+
 .muted {
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;

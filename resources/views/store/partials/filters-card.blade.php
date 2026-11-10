@@ -5,7 +5,7 @@
 
 <form method="get" action="{{ route('store.shop') }}" class="space-y-4">
   @foreach(request()->except(['page']) as $k => $v)
-    @if(!in_array($k, ['q','category','collection','min','max','sort']))
+    @if(!in_array($k, ['q','category','collection','min','max','sort', ...array_keys($catalogOptions)]))
       @if(is_array($v))
         @foreach($v as $vv)<input type="hidden" name="{{ $k }}[]" value="{{ $vv }}">@endforeach
       @else
@@ -46,6 +46,22 @@
             <option value="{{ $co->slug }}" @selected($isSelected)>{{ $co->title ?: $co->slug }}</option>
           @endforeach
         </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        @foreach($catalogOptions as $attribute => $values)
+          @if($values)
+            <label>
+              <span class="form-label">{{ __('catalog.'.$attribute) }}</span>
+              <select name="{{ $attribute }}" class="select">
+                <option value="">{{ __('catalog.all') }}</option>
+                @foreach($values as $value)
+                  <option value="{{ $value }}" @selected(($catalogFilters[$attribute] ?? '') === $value)>{{ $value }}</option>
+                @endforeach
+              </select>
+            </label>
+          @endif
+        @endforeach
       </div>
 
       <div class="grid grid-cols-2 gap-2">

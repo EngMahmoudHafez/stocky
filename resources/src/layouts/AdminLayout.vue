@@ -71,12 +71,9 @@
         <router-view :key="$route.path" />
       </a-layout-content>
 
-      <!-- Single-line footer: the admin's custom text (settings → General),
-           falling back to the default copyright line. Version pinned top-right. -->
       <a-layout-footer class="footer">
         <span v-if="version" class="footer-version">v{{ version }}</span>
-        <template v-if="auth.footerText">{{ auth.footerText }}</template>
-        <template v-else>© {{ year }} {{ auth.developedBy }}. {{ tf('All_rights_reserved', 'All rights reserved') }}.</template>
+        © {{ year }} M.H · {{ isRtl ? 'تنفيذ' : 'Implemented by' }} M.H
       </a-layout-footer>
     </a-layout>
 
@@ -95,7 +92,7 @@ import AppTopbar from '../components/AppTopbar.vue';
 import Customizer from '../components/Customizer.vue';
 import { useUiStore } from '../stores/ui';
 import { useAuthStore } from '../stores/auth';
-import { t as tf } from '../i18n';
+import { i18n } from '../i18n';
 import { navLoading } from '../lib/progress';
 
 const ui = useUiStore();
@@ -152,6 +149,7 @@ const siderTheme = computed(() =>
   ui.sidebarLayout === 'dark' || ui.dark ? 'dark' : 'light'
 );
 const year = computed(() => new Date().getFullYear());
+const isRtl = computed(() => i18n.global.locale.value === 'ar');
 // System version injected as a meta tag by next.blade.php (from version.txt).
 const version = document.querySelector('meta[name="app-version"]')?.getAttribute('content') || '';
 

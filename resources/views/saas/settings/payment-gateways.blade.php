@@ -230,7 +230,7 @@
                         <li>Paste them here and save. Start with test/sandbox mode.</li>
                         <li>
                             Set up webhook URL for payment verification:<br>
-                            <span class="code-pill">https://stockysaas.xyz/webhook/stripe</span><br>
+                            <span class="code-pill">https://your-domain.example/webhook/stripe</span><br>
                             <small style="color:#6b7280;">Events to subscribe to:</small><br>
                             <span class="code-pill">checkout.session.completed</span>
                             <span class="code-pill">checkout.session.async_payment_succeeded</span>
@@ -245,7 +245,7 @@
                         <li>Paste them here and save. Start with test/sandbox mode.</li>
                         <li>
                             Set up webhook URL for payment verification:<br>
-                            <span class="code-pill">https://stockysaas.xyz/webhook/paypal</span><br>
+                            <span class="code-pill">https://your-domain.example/webhook/paypal</span><br>
                             <small style="color:#6b7280;">Events to subscribe to:</small><br>
                             <span class="code-pill">PAYMENT.CAPTURE.COMPLETED</span>
                             <span class="code-pill">PAYMENT.SALE.COMPLETED</span>
@@ -260,7 +260,7 @@
                         <li>Paste them here and save. Start with test/sandbox mode.</li>
                         <li>
                             Set up webhook URL for payment verification:<br>
-                            <span class="code-pill">https://stockysaas.xyz/webhook/paystack</span><br>
+                            <span class="code-pill">https://your-domain.example/webhook/paystack</span><br>
                             <small style="color:#6b7280;">Events to subscribe to:</small><br>
                             <span class="code-pill">charge.success</span>
                             <span class="code-pill">charge.failed</span>
@@ -274,7 +274,7 @@
                         <li>Create an account on Flutterwave's dashboard.</li>
                         <li>Copy your API keys from the developer settings.</li>
                         <li>Paste them here and save. Start with test/sandbox mode.</li>
-                        <li>Set up webhook URL: <span class="code-pill">https://stockysaas.xyz/webhook/flutterwave</span></li>
+                        <li>Set up webhook URL: <span class="code-pill">https://your-domain.example/webhook/flutterwave</span></li>
                         <li>Switch to live mode when ready for production.</li>
                     </ol>
                 @elseif($active === 'mollie')
@@ -282,7 +282,7 @@
                         <li>Create an account on Mollie's dashboard.</li>
                         <li>Copy your API key from the developer settings.</li>
                         <li>Paste it here and save.</li>
-                        <li>Set up webhook URL: <span class="code-pill">https://stockysaas.xyz/webhook/mollie</span></li>
+                        <li>Set up webhook URL: <span class="code-pill">https://your-domain.example/webhook/mollie</span></li>
                     </ol>
                 @elseif($active === 'cash')
                     <ol class="setup-list">

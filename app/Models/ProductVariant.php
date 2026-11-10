@@ -10,7 +10,7 @@ class ProductVariant extends Model
 
     protected $fillable = [
         'product_id', 'name', 'qty', 'cost', 'price', 'wholesale', 'min_price', 'code', 'gtin', 'image',
-        'woocommerce_variation_id',
+        'woocommerce_variation_id', 'color', 'size',
     ];
 
     protected $casts = [

@@ -1181,7 +1181,7 @@ class SettingsController extends Controller
         $design['currency'] = optional($setting?->Currency)->symbol ?? '';
 
         $labels = [[
-            'name' => 'Stocky Test Label',
+            'name' => 'Inventory Test Label',
             'barcode' => '628112345678',
             'Type_barcode' => 'CODE128',
             'Net_price' => '49.99',

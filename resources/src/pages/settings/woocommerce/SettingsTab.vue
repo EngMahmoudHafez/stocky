@@ -68,7 +68,7 @@
         </div>
         <p class="guide-intro">These fields are used only for product images. The WooCommerce API (Store URL + Consumer key/secret) handles sync for products, stock, categories, brands, customers, and orders; the WordPress REST API handles the Media Library (search and upload images).</p>
         <ul class="guide-list">
-          <li><PictureOutlined :style="{ color: token.colorPrimary }" /><span>When syncing products or stock, Stocky can attach product images: it first searches the WordPress Media Library for an existing image by filename; if not found, it uploads the image via the WordPress API.</span></li>
+          <li><PictureOutlined :style="{ color: token.colorPrimary }" /><span>When syncing products or stock, the inventory system can attach product images: it first searches the WordPress Media Library for an existing image by filename; if not found, it uploads the image via the WordPress API.</span></li>
           <li><KeyOutlined :style="{ color: token.colorPrimary }" /><span>Use a WordPress user that can manage media (e.g. Administrator). Create an Application Password in WordPress: Users → Profile (or your user) → Application Passwords — add a new one and paste it here.</span></li>
           <li><InfoCircleOutlined :style="{ color: token.colorPrimary }" /><span>If you leave these blank, sync still works for all data (products, stock, categories, brands, customers, orders); only product image attachment (search/upload) is skipped.</span></li>
         </ul>
@@ -96,7 +96,7 @@
           Manual sync (on demand)
         </div>
         <ul class="guide-list">
-          <li><SwapOutlined :style="{ color: token.colorPrimary }" /><span>Sync works in both directions: Stocky → WooCommerce and WooCommerce → Stocky.</span></li>
+          <li><SwapOutlined :style="{ color: token.colorPrimary }" /><span>Sync works in both directions: the inventory system → WooCommerce and WooCommerce → the inventory system.</span></li>
           <li><MenuOutlined :style="{ color: token.colorPrimary }" /><span>Manual sync is available in all WooCommerce tabs (Products, Stock, etc.); use the sync actions in each tab to run sync on demand.</span></li>
         </ul>
       </div>
@@ -127,7 +127,7 @@
         </div>
         <ul class="guide-list">
           <li><ExclamationCircleOutlined :style="{ color: token.colorWarning }" /><span>Changing Store URL or API keys resets mappings (products, categories, brands, customers); items will sync again to the (new) store.</span></li>
-          <li><ExclamationCircleOutlined :style="{ color: token.colorWarning }" /><span>Keep SKUs consistent between Stocky and WooCommerce to avoid duplicate products and to relink safely.</span></li>
+          <li><ExclamationCircleOutlined :style="{ color: token.colorWarning }" /><span>Keep SKUs consistent between the inventory system and WooCommerce to avoid duplicate products and to relink safely.</span></li>
         </ul>
       </div>
     </a-card>

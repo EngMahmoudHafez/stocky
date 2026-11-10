@@ -5,7 +5,8 @@
       :breadcrumb="[$t('Products'), isEdit ? $t('UpdateProduct') : $t('AddProduct')]"
     >
       <template #extra>
-        <a-space>
+        <a-space wrap>
+          <a-button :aria-expanded="advanced" @click="advanced = !advanced">{{ advanced ? labels.hideAdvanced : labels.advanced }}</a-button>
           <a-button @click="$router.push('/products')">{{ $t('Cancel') }}</a-button>
           <a-button type="primary" :loading="submitting" @click="submit">{{ $t('submit') }}</a-button>
         </a-space>
@@ -58,7 +59,7 @@
                   </div>
                 </a-form-item>
               </a-col>
-              <a-col :xs="24" :md="12">
+              <a-col v-if="advanced" :xs="24" :md="12">
                 <a-form-item :label="$t('BarcodeSymbology')" name="Type_barcode">
                   <a-select
                     v-model:value="product.Type_barcode"
@@ -67,7 +68,7 @@
                   />
                 </a-form-item>
               </a-col>
-              <a-col v-if="showGtin" :xs="24" :md="8">
+              <a-col v-if="advanced && showGtin" :xs="24" :md="8">
                 <a-form-item :label="$t('Barcode_GTIN')">
                   <a-input v-model:value="product.gtin" />
                 </a-form-item>
@@ -83,7 +84,7 @@
                   <a class="quick-add" @click="openQuickCategory">+ {{ $t('Add') }} {{ $t('Categorie') }}</a>
                 </a-form-item>
               </a-col>
-              <a-col :xs="24" :md="12">
+              <a-col v-if="advanced" :xs="24" :md="12">
                 <a-form-item :label="$t('SubCategory')">
                   <a-select
                     v-model:value="product.assigned_subcategory_ids" mode="multiple" allow-clear
@@ -92,7 +93,7 @@
                   />
                 </a-form-item>
               </a-col>
-              <a-col :xs="24" :md="12">
+              <a-col v-if="advanced" :xs="24" :md="12">
                 <a-form-item :label="$t('Brand')">
                   <a-select
                     v-model:value="product.brand_id" allow-clear show-search option-filter-prop="label"
@@ -101,11 +102,16 @@
                   <a class="quick-add" @click="openQuickBrand">+ {{ $t('Add') }} {{ $t('Brand') }}</a>
                 </a-form-item>
               </a-col>
+              <a-col v-for="field in ['material', 'season']" :key="field" :xs="24" :md="12">
+                <a-form-item :label="catalogLabel(field, locale)">
+                  <a-input v-model:value="product[field]" :maxlength="100" />
+                </a-form-item>
+              </a-col>
               <a-col :xs="24" :md="12">
-                <a-form-item :label="$t('Size_Guide')">
+                <a-form-item :label="$t('Size_Guide')" :extra="labels.guideHelp">
                   <a-select
                     v-model:value="product.size_guide_id" allow-clear show-search option-filter-prop="label"
-                    :options="sizeGuides.map(s => ({ value: s.id, label: s.name }))"
+                    :options="sizeGuides.map(s => ({ value: s.id, label: s.name }))" :placeholder="categoryGuide || labels.categoryDefault"
                   />
                 </a-form-item>
               </a-col>
@@ -113,7 +119,7 @@
           </a-card>
 
           <!-- Pricing -->
-          <a-card size="small" :title="$t('Price')" style="margin-bottom: 16px">
+          <a-card v-if="product.type !== 'is_variant' || advanced" size="small" :title="$t('Price')" style="margin-bottom: 16px">
             <a-row :gutter="16">
               <a-col v-if="product.type !== 'is_variant'" :xs="12" :md="6">
                 <a-form-item :label="$t('Cost')" name="cost">
@@ -125,22 +131,22 @@
                   <a-input-number v-model:value="product.price" :min="0" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col v-if="hasTieredPricing" :xs="12" :md="6">
+              <a-col v-if="advanced && hasTieredPricing" :xs="12" :md="6">
                 <a-form-item :label="$t('Wholesale_Price')">
                   <a-input-number v-model:value="product.wholesale_price" :min="0" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col v-if="hasTieredPricing" :xs="12" :md="6">
+              <a-col v-if="advanced && hasTieredPricing" :xs="12" :md="6">
                 <a-form-item :label="$t('Min_Selling_Price')">
                   <a-input-number v-model:value="product.min_price" :min="0" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col :xs="12" :md="6">
+              <a-col v-if="advanced" :xs="12" :md="6">
                 <a-form-item :label="$t('OrderTax')">
                   <a-input-number v-model:value="product.TaxNet" :min="0" :max="100" addon-after="%" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col :xs="12" :md="6">
+              <a-col v-if="advanced" :xs="12" :md="6">
                 <a-form-item :label="$t('TaxMethod')" name="tax_method">
                   <a-select
                     v-model:value="product.tax_method"
@@ -148,12 +154,12 @@
                   />
                 </a-form-item>
               </a-col>
-              <a-col :xs="12" :md="6">
+              <a-col v-if="advanced" :xs="12" :md="6">
                 <a-form-item :label="$t('Discount')">
                   <a-input-number v-model:value="product.discount" :min="0" style="width: 100%" />
                 </a-form-item>
               </a-col>
-              <a-col :xs="12" :md="6">
+              <a-col v-if="advanced" :xs="12" :md="6">
                 <a-form-item :label="$t('Discount_Method')" name="discount_method">
                   <a-select
                     v-model:value="product.discount_method"
@@ -165,14 +171,16 @@
           </a-card>
 
           <!-- Variants -->
-          <a-card v-if="product.type === 'is_variant'" size="small" :title="$t('Variants')" style="margin-bottom: 16px">
-            <a-input-group compact style="display: flex; margin-bottom: 12px">
-              <a-input v-model:value="variantTag" :placeholder="$t('Enter_the_Variant')" @press-enter="addVariant" />
+          <a-card v-if="product.type === 'is_variant'" size="small" :title="labels.variants" style="margin-bottom: 16px">
+            <a-space wrap style="margin-bottom: 12px">
+              <a-input v-model:value="variantColor" :maxlength="100" :placeholder="catalogLabel('color', locale)" :aria-label="catalogLabel('color', locale)" @press-enter="addVariant" />
+              <a-input v-model:value="variantSize" :maxlength="100" :placeholder="catalogLabel('size', locale)" :aria-label="catalogLabel('size', locale)" @press-enter="addVariant" />
+              <a-input v-if="advanced" v-model:value="variantTag" :placeholder="labels.legacyVariant" @press-enter="addVariant" />
               <a-button type="primary" @click="addVariant">
                 <template #icon><PlusOutlined /></template>
-                {{ $t('Add') }}
+                {{ labels.addVariant }}
               </a-button>
-            </a-input-group>
+            </a-space>
             <a-table
               :columns="variantColumns" :data-source="variants" :pagination="false"
               size="small" :row-key="r => r.var_id" :scroll="{ x: 'max-content' }"
@@ -201,7 +209,13 @@
                   </div>
                 </template>
                 <template v-else-if="column.key === 'gtin'"><a-input v-model:value="record.gtin" size="small" /></template>
-                <template v-else-if="column.key === 'text'"><a-input v-model:value="record.text" size="small" /></template>
+                <template v-else-if="column.key === 'color' || column.key === 'size'">
+                  <a-input v-model:value="record[column.key]" :aria-label="catalogLabel(column.key, locale)" :maxlength="100" size="small" @blur="updateVariantLabel(record)" />
+                </template>
+                <template v-else-if="column.key === 'text'">
+                  <a-input v-if="!record.color && !record.size" v-model:value="record.text" size="small" />
+                  <span v-else>{{ record.text }}</span>
+                </template>
                 <template v-else-if="column.key === 'cost'"><a-input v-model:value="record.cost" size="small" /></template>
                 <template v-else-if="column.key === 'price'"><a-input v-model:value="record.price" size="small" /></template>
                 <template v-else-if="column.key === 'wholesale'"><a-input v-model:value="record.wholesale" size="small" /></template>
@@ -260,7 +274,7 @@
                   <a class="quick-add" @click="openQuickUnit">+ {{ $t('Add') }} {{ $t('Unit') }}</a>
                 </a-form-item>
               </a-col>
-              <a-col :xs="24" :md="8">
+              <a-col v-if="advanced" :xs="24" :md="8">
                 <a-form-item :label="$t('UnitSale')">
                   <a-select
                     v-model:value="product.unit_sale_id" allow-clear
@@ -268,7 +282,7 @@
                   />
                 </a-form-item>
               </a-col>
-              <a-col :xs="24" :md="8">
+              <a-col v-if="advanced" :xs="24" :md="8">
                 <a-form-item :label="$t('UnitPurchase')">
                   <a-select
                     v-model:value="product.unit_purchase_id" allow-clear
@@ -280,7 +294,7 @@
           </a-card>
 
           <!-- Inventory / dimensions -->
-          <a-card size="small" :title="$t('Details')" style="margin-bottom: 16px">
+          <a-card v-if="advanced" size="small" :title="$t('Details')" style="margin-bottom: 16px">
             <a-row :gutter="16">
               <a-col :xs="12" :md="8">
                 <a-form-item :label="$t('StockAlert')">
@@ -323,7 +337,7 @@
           <!-- Multi-pack selling (single products: one flat list; variant
                products: one pack list per variant) -->
           <a-card
-            v-if="enableMultiPack && (product.type === 'is_single' || (product.type === 'is_variant' && variants.length))"
+            v-if="advanced && enableMultiPack && (product.type === 'is_single' || (product.type === 'is_variant' && variants.length))"
             size="small" :title="$t('Multi_Pack_Selling')" style="margin-bottom: 16px"
           >
             <template #extra>
@@ -397,11 +411,13 @@
           </a-card>
 
           <!-- Opening stock -->
-          <a-card
+          <details
             v-if="(product.type === 'is_single' || (!isEdit && product.type === 'is_variant' && variants.length)) && warehouses.length"
-            size="small" :title="$t('OpeningStock')" style="margin-bottom: 16px"
+            class="opening-stock"
           >
-            <div class="wh-grid">
+            <summary>{{ $t('OpeningStock') }}</summary>
+            <a-card size="small">
+              <div class="wh-grid">
               <div v-for="w in warehouses" :key="w.id" class="wh-tile">
                 <div class="wh-head">
                   <span class="wh-icon"><ShopOutlined /></span>
@@ -438,11 +454,12 @@
                   </template>
                 </div>
               </div>
-            </div>
-          </a-card>
+              </div>
+            </a-card>
+          </details>
 
           <!-- Storefront: tags / FAQs -->
-          <a-card size="small" :title="$t('Store')" style="margin-bottom: 16px">
+          <a-card v-if="advanced" size="small" :title="$t('Store')" style="margin-bottom: 16px">
             <a-form-item :label="$t('Tags')">
               <a-select v-model:value="tags" mode="tags" :token-separators="[',']" :placeholder="$t('Tags')" />
             </a-form-item>
@@ -462,7 +479,7 @@
           </a-card>
 
           <!-- Pharmacy (only when batch/expiry tracking is enabled in the right column) -->
-          <a-card v-if="product.is_batch_tracked" size="small" :title="'Pharmacy'" style="margin-bottom: 16px">
+          <a-card v-if="advanced && product.is_batch_tracked" size="small" :title="'Pharmacy'" style="margin-bottom: 16px">
             <a-alert type="info" show-icon :message="$t('Pharmacy_Batch_Expiry_Note')" style="margin-bottom: 16px" />
             <a-row :gutter="16">
               <a-col :xs="24" :md="8">
@@ -526,23 +543,23 @@
           <a-card size="small" :title="$t('Status')" style="margin-bottom: 16px">
             <a-space direction="vertical" size="small" style="width: 100%">
               <a-checkbox v-model:checked="product.is_active">{{ $t('Active') }}</a-checkbox>
-              <a-checkbox v-model:checked="product.not_selling">{{ $t('This_Product_Not_For_Selling') }}</a-checkbox>
-              <a-checkbox v-if="showSerialTracking && product.type === 'is_single'" v-model:checked="product.is_imei">
+              <a-checkbox v-if="advanced" v-model:checked="product.not_selling">{{ $t('This_Product_Not_For_Selling') }}</a-checkbox>
+              <a-checkbox v-if="advanced && showSerialTracking && product.type === 'is_single'" v-model:checked="product.is_imei">
                 {{ $t('Track_Serial_IMEI') }}
               </a-checkbox>
-              <a-checkbox v-if="product.type === 'is_single'" v-model:checked="product.is_batch_tracked">
+              <a-checkbox v-if="advanced && product.type === 'is_single'" v-model:checked="product.is_batch_tracked">
                 {{ $t('Track_Batches_Expiry') }} ({{ $t('Pharmacy_Mode') }})
               </a-checkbox>
               <a-divider style="margin: 8px 0" />
-              <a-checkbox v-model:checked="product.is_featured">{{ $t('Featured_Product') }}</a-checkbox>
+              <a-checkbox v-if="advanced" v-model:checked="product.is_featured">{{ $t('Featured_Product') }}</a-checkbox>
               <a-checkbox v-model:checked="product.hide_from_online_store">{{ $t('Hide_From_Online_Store') }}</a-checkbox>
-              <a-checkbox v-model:checked="product.is_returnable">{{ $t('Is_Returnable') }}</a-checkbox>
-              <a-checkbox v-model:checked="product.is_classified">{{ $t('Sold_As_Classified') }}</a-checkbox>
+              <a-checkbox v-if="advanced" v-model:checked="product.is_returnable">{{ $t('Is_Returnable') }}</a-checkbox>
+              <a-checkbox v-if="advanced" v-model:checked="product.is_classified">{{ $t('Sold_As_Classified') }}</a-checkbox>
             </a-space>
           </a-card>
 
           <!-- Pre-order -->
-          <a-card size="small" :title="$t('PreOrder')" style="margin-bottom: 16px">
+          <a-card v-if="advanced" size="small" :title="$t('PreOrder')" style="margin-bottom: 16px">
             <a-checkbox v-model:checked="product.is_preorder">{{ $t('Enable_Preorder') }}</a-checkbox>
             <template v-if="product.is_preorder">
               <a-checkbox v-model:checked="product.preorder_always" style="display: block; margin: 10px 0 0">
@@ -561,7 +578,7 @@
           </a-card>
 
           <!-- Warranty / guarantee -->
-          <a-card size="small" :title="$t('Warranty_Guarantee_Tracking')">
+          <a-card v-if="advanced" size="small" :title="$t('Warranty_Guarantee_Tracking')">
             <a-row :gutter="12">
               <a-col :span="12">
                 <a-form-item :label="$t('Warranty_Period')">
@@ -691,8 +708,21 @@ import PageHeader from '../../components/PageHeader.vue';
 import ProductScanModal from '../../components/ProductScanModal.vue';
 import http from '../../lib/http';
 import { barcodeValueError, generateBarcodeValue } from '../../lib/barcodeSymbology';
+import { catalogLabel } from '../../lib/catalogLabels';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const advanced = ref(false);
+const labels = computed(() => locale.value === 'ar' ? {
+  advanced: 'إعدادات إضافية', hideAdvanced: 'إخفاء الإعدادات الإضافية',
+  variants: 'الألوان والمقاسات', addVariant: 'إضافة تركيبة', photo: 'الصورة',
+  categoryDefault: 'دليل التصنيف', guideHelp: 'اختار دليل خاص لو الموديل له قياسات مختلفة.',
+  legacyVariant: 'اسم تركيبة بدون لون ومقاس', variantRequired: 'اكتب اللون والمقاس أو اسم التركيبة.',
+} : {
+  advanced: 'More settings', hideAdvanced: 'Hide more settings',
+  variants: 'Colors and sizes', addVariant: 'Add variant', photo: 'Image',
+  categoryDefault: 'Category guide', guideHelp: 'Choose a guide if this style uses different measurements.',
+  legacyVariant: 'Variant name without color and size', variantRequired: 'Enter a color and size or a variant name.',
+});
 const route = useRoute();
 const router = useRouter();
 
@@ -722,6 +752,8 @@ let gallerySeed = 0;
 
 const variants = ref([]);
 const variantTag = ref('');
+const variantColor = ref('');
+const variantSize = ref('');
 const materiels = ref([]);
 const comboProducts = ref([]);
 const comboQuery = ref('');
@@ -737,7 +769,7 @@ const periodUnits = computed(() => [
 ]);
 
 const product = ref({
-  type: 'is_single',
+  type: 'is_variant',
   name: '', code: '', gtin: '', points: 0, Type_barcode: 'CODE128',
   cost: null, price: null, wholesale_price: null, min_price: null,
   brand_id: undefined, category_id: '', sub_category_id: '',
@@ -757,12 +789,15 @@ const product = ref({
   is_batch_tracked: false, shelf_life_days: '',
   generic_name: '', strength: '', dosage_form: '', pack_size: '',
   manufacturer: '', prescription_required: false, drug_schedule: '',
-  size_guide_id: null,
+  size_guide_id: null, material: '', season: '',
   warranty_period: null, warranty_unit: 'months', warranty_terms: '',
   has_guarantee: false, guarantee_period: null, guarantee_unit: 'months',
 });
 
 /* ---------------- options ---------------- */
+const categoryGuide = computed(() => categories.value.find(category =>
+  String(category.id) === String(product.value.assigned_category_ids?.[0])
+)?.size_guide?.name);
 const categoryOptions = computed(() => categories.value.map(c => ({ value: c.id, label: c.name })));
 const subcategoryOptions = computed(() => {
   const picked = new Set((product.value.assigned_category_ids || []).map(String));
@@ -792,14 +827,17 @@ const hasTieredPricing = computed(() =>
   product.value.type === 'is_single' || product.value.type === 'is_service');
 
 const variantColumns = computed(() => [
-  { title: t('Image'), key: 'image', width: 80 },
+  { title: labels.value.photo, key: 'image', width: 80 },
   { title: t('Code'), key: 'code', width: 130 },
-  ...(showGtin.value ? [{ title: t('Barcode_GTIN'), key: 'gtin', width: 130 }] : []),
-  { title: t('Name'), key: 'text', width: 150 },
+  ...(advanced.value && showGtin.value ? [{ title: t('Barcode_GTIN'), key: 'gtin', width: 130 }] : []),
+  ...['color', 'size'].map(field => ({ title: catalogLabel(field, locale.value), key: field, width: 115 })),
+  ...(variants.value.some(row => !row.color && !row.size) ? [{ title: t('Name'), key: 'text', width: 150 }] : []),
   { title: t('Cost'), key: 'cost', width: 110 },
   { title: t('Price'), key: 'price', width: 110 },
-  { title: t('Wholesale_Price'), key: 'wholesale', width: 120 },
-  { title: t('Min_Selling_Price'), key: 'min_price', width: 120 },
+  ...(advanced.value ? [
+    { title: t('Wholesale_Price'), key: 'wholesale', width: 120 },
+    { title: t('Min_Selling_Price'), key: 'min_price', width: 120 },
+  ] : []),
   { title: '', key: 'action', width: 50 },
 ]);
 const materielColumns = computed(() => [
@@ -884,16 +922,30 @@ function onBaseUnitChange(value) {
 }
 
 /* variants */
+function updateVariantLabel(variant) {
+  const attributes = [variant.color?.trim(), variant.size?.trim()].filter(Boolean);
+  if (attributes.length) variant.text = attributes.join(' / ');
+}
+
 function addVariant() {
-  const tag = (variantTag.value || '').trim();
-  if (!tag) { message.warning('Please enter the variant'); return; }
-  if (variants.value.some(v => v.text === tag)) { message.warning(t('VariantDuplicate')); return; }
+  const previous = variants.value.at(-1);
   const row = {
-    var_id: variants.value.length + 1, text: tag,
-    code: '', gtin: '', cost: '', price: '', wholesale: '', min_price: '',
+    var_id: Math.max(0, ...variants.value.map(variant => Number(variant.var_id))) + 1,
+    text: variantTag.value.trim(), color: variantColor.value.trim(), size: variantSize.value.trim(),
+    code: '', gtin: '', cost: previous?.cost ?? '', price: previous?.price ?? '',
+    wholesale: previous?.wholesale ?? '', min_price: previous?.min_price ?? '',
   };
+  updateVariantLabel(row);
+  if (!row.text) { message.warning(labels.value.variantRequired); return; }
+  if (variants.value.some(variant => variant.text.toLowerCase() === row.text.toLowerCase())) {
+    message.warning(t('VariantDuplicate'));
+    return;
+  }
+  generateVariantCode(row);
   if (enableMultiPack.value) ensureVariantDefaultPack(row);
   variants.value.push(row);
+  variantColor.value = '';
+  variantSize.value = '';
   variantTag.value = '';
 }
 
@@ -1100,6 +1152,7 @@ async function submit() {
   }
   submitting.value = true;
   syncLegacyCategoryFields();
+  variants.value.forEach(updateVariantLabel);
   product.value.is_variant = product.value.type === 'is_variant' && variants.value.length > 0;
 
   const fd = new FormData();
@@ -1148,7 +1201,6 @@ async function submit() {
     }
   }
 
-  fd.append('size_guide_id', product.value.size_guide_id || '');
   fd.append('tags', JSON.stringify(tags.value || []));
   fd.append('faqs', JSON.stringify(faqs.value || []));
 
@@ -1304,6 +1356,7 @@ onMounted(async () => {
       showGtin.value = data.show_product_gtin !== false;
       showSerialTracking.value = data.show_serial_tracking === true;
       enableMultiPack.value = data.enable_multi_pack_selling === true;
+      if (units.value.length === 1) product.value.unit_id = units.value[0].id;
       if (enableMultiPack.value) ensureDefaultPack();
       warehouseRows.value = Object.fromEntries(
         warehouses.value.map(w => [w.id, { qte: w.qte ?? 0, warehouse_location_id: null }]));
@@ -1319,6 +1372,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.opening-stock { margin-bottom: 16px; }
+.opening-stock summary { cursor: pointer; font-weight: 600; padding-block: 12px; }
+
 .quick-add {
   font-size: 12px;
   display: inline-block;

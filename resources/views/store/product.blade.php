@@ -34,6 +34,8 @@
     return [
       'id' => (int) ($v->id ?? 0),
       'name' => (string) ($v->name ?? ''),
+      'color' => $v->color,
+      'size' => $v->size,
       'price' => (float) ($v->price ?? 0),
       'display_price' => $final,
       'display_price_formatted' => $currency.number_format($final, $dec, '.', ','),
@@ -41,6 +43,7 @@
       'stock' => (int) max(0, $v->stock ?? $v->qty ?? 0),
     ];
   })->values();
+  $structuredVariants = $variantPayload->isNotEmpty() && $variantPayload->every(fn ($v) => filled($v['color']) && filled($v['size']));
   $productStock = $variants->isEmpty() ? (int) max(0, $p->stock ?? 0) : null;
 
   // ----- Availability -----
@@ -166,7 +169,18 @@
       @endif
 
       {{-- Variants --}}
-      @if($variants->isNotEmpty())
+      @if($structuredVariants)
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <label>
+            <span class="form-label">{{ __('catalog.color') }}</span>
+            <select id="pdpColor" class="select"></select>
+          </label>
+          <label>
+            <span class="form-label">{{ __('catalog.size') }}</span>
+            <select id="pdpSize" class="select"></select>
+          </label>
+        </div>
+      @elseif($variants->isNotEmpty())
         <div class="mb-4">
           <div class="text-sm font-medium text-fg-secondary mb-2">{{ __('messages.Options') }}</div>
           <div id="pdpVariants" class="flex flex-wrap gap-2">
@@ -265,7 +279,7 @@
                 data-product-id="{{ $p->id }}" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}">
           <x-store.icon name="heart" class="w-4 h-4" /><span>{{ $inWishlist ? __('messages.InWishlist') : __('messages.AddToWishlist') }}</span>
         </button>
-        @if($p->sizeGuide && $p->sizeGuide->status)
+        @if($sizeGuide)
         <button type="button" id="pdpSizeGuideBtn" class="inline-flex items-center gap-1 text-fg-secondary hover:text-accent-500">
           <x-store.icon name="ruler" class="w-4 h-4" /><span>{{ __('messages.SizeGuide') }}</span>
         </button>
@@ -274,6 +288,11 @@
 
       {{-- Meta: SKU / Category / Tags --}}
       <div class="border-t border-line-subtle pt-4 space-y-2 text-sm">
+        @foreach(['material', 'season'] as $attribute)
+          @if(filled($p->$attribute))
+            <div><span class="text-fg-muted">{{ __('catalog.'.$attribute) }}</span> <span class="text-fg-secondary">{{ $p->$attribute }}</span></div>
+          @endif
+        @endforeach
         @if($p->code)
           <div><span class="text-fg-muted">{{ __('messages.SKU') }}:</span> <span class="text-fg-secondary">{{ $p->code }}</span></div>
         @endif
@@ -501,18 +520,40 @@
     if (buyBtn){ buyBtn.disabled = !avail; }
     if (stockText && selected.stock !== null){ stockText.textContent = avail ? IN_STOCK_LABEL : OUT_LABEL; }
   }
+  function selectVariant(variant){
+    if (!variant) return;
+    selected = { id: variant.id, price: variant.display_price, stock: variant.stock, image: variant.image || IMG, name: variant.name };
+    if (priceEl) priceEl.textContent = variant.display_price_formatted || fmt(selected.price);
+    if (mainImg) mainImg.src = selected.image;
+    refreshAvailability();
+  }
+  var colorSelect = document.getElementById('pdpColor');
+  var sizeSelect = document.getElementById('pdpSize');
+  if (colorSelect && sizeSelect) {
+    var available = VARIANTS.filter(function(v){ return ALLOW_OVERSELL || IS_PREORDER || v.stock > 0; });
+    var colors = [...new Set(available.map(function(v){ return v.color; }))];
+    colorSelect.replaceChildren(...colors.map(function(color){ return new Option(color, color); }));
+    colorSelect.disabled = !colors.length;
+    sizeSelect.disabled = !colors.length;
+    function updateSize(){
+      selectVariant(available.find(function(v){ return v.color === colorSelect.value && v.size === sizeSelect.value; }));
+    }
+    function updateSizes(){
+      var previous = sizeSelect.value;
+      var sizes = [...new Set(available.filter(function(v){ return v.color === colorSelect.value; }).map(function(v){ return v.size; }))];
+      sizeSelect.replaceChildren(...sizes.map(function(size){ return new Option(size, size); }));
+      if (sizes.includes(previous)) sizeSelect.value = previous;
+      updateSize();
+    }
+    colorSelect.addEventListener('change', updateSizes);
+    sizeSelect.addEventListener('change', updateSize);
+    updateSizes();
+  }
   document.querySelectorAll('.pdp-variant').forEach(function(btn){
     btn.addEventListener('click', function(){
       document.querySelectorAll('.pdp-variant').forEach(function(b){ b.classList.remove('is-selected'); });
       btn.classList.add('is-selected');
-      selected.id = Number(btn.getAttribute('data-variant-id'));
-      selected.price = Number(btn.getAttribute('data-price'));
-      selected.stock = Number(btn.getAttribute('data-stock'));
-      selected.name = btn.textContent.trim();
-      var vimg = btn.getAttribute('data-image');
-      if (priceEl){ priceEl.textContent = btn.getAttribute('data-price-formatted') || fmt(selected.price); }
-      if (vimg && vimg !== 'null' && mainImg){ mainImg.src = vimg; selected.image = vimg; }
-      refreshAvailability();
+      selectVariant(VARIANTS[Number(btn.getAttribute('data-index'))]);
     });
   });
   refreshAvailability();

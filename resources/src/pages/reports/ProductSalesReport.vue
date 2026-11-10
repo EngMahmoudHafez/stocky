@@ -17,6 +17,7 @@
       <a-select
         v-model:value="clientId" style="width: 180px" allow-clear show-search option-filter-prop="label"
         :placeholder="$t('Customer')" :options="opts('customers')" @change="crud.reload()" />
+      <CatalogFilters v-model="catalogFilters" :options="crud.payload.value?.catalog_options" @update:model-value="crud.reload()" />
     </template>
 
     <template #bodyCell="{ column, record }">
@@ -33,15 +34,19 @@ import ReportPage from '../../components/ReportPage.vue';
 import { useCrudTable } from '../../composables/useCrudTable';
 import { useFormat } from '../../composables/useFormat';
 import DateRangePicker from '../../components/DateRangePicker.vue';
+import CatalogFilters from '../../components/CatalogFilters.vue';
+import { catalogFields, catalogLabel } from '../../lib/catalogLabels';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { money, date } = useFormat();
 
 const range = ref(null);
 const warehouseId = ref(undefined);
 const clientId = ref(undefined);
 
+const catalogFilters = ref({});
 const filterParams = () => ({
+  ...catalogFilters.value,
   ...(range.value?.[0] ? { from: range.value[0].format('YYYY-MM-DD') } : {}),
   ...(range.value?.[1] ? { to: range.value[1].format('YYYY-MM-DD') } : {}),
   ...(warehouseId.value ? { warehouse_id: warehouseId.value } : {}),
@@ -65,6 +70,7 @@ const columns = computed(() => [
   { title: t('Customer'), dataIndex: 'client_name', key: 'client_name' },
   { title: t('warehouse'), dataIndex: 'warehouse_name', key: 'warehouse_name' },
   { title: t('ProductName'), dataIndex: 'product_name', key: 'product_name' },
+  ...catalogFields.filter(field => catalogFilters.value[field]).map(field => ({ title: catalogLabel(field, locale.value), dataIndex: field, key: field })),
   { title: t('Quantity'), dataIndex: 'quantity', key: 'quantity', align: 'right', sum: true },
   { title: t('Total'), key: 'total', dataIndex: 'total', sorter: true, align: 'right', sum: 'money', exportValue: r => money(r.total) },
 ]);

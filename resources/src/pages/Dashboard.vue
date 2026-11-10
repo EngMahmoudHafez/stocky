@@ -116,7 +116,6 @@
                 @click="rankBy = key"
               >{{ t(key) }}</a-button>
             </div>
-            <p v-if="rankBy === 'sizes' || rankBy === 'colors'" class="card-description">{{ t('variantFormat') }}</p>
             <p v-if="rankBy === 'customers'" class="card-description">{{ t('customerRevenue') }}</p>
             <ol v-if="ranking.length" class="overview-list ranking-list">
               <li v-for="(entry, index) in ranking" :key="index">
@@ -189,9 +188,10 @@ const { t, locale } = useI18n({
       categories: 'التصنيفات',
       sizes: 'المقاسات',
       colors: 'الألوان',
+      materials: 'الخامات',
+      seasons: 'المواسم',
       customers: 'العملاء',
       customerRevenue: 'ترتيب العملاء حسب إجمالي قيمة المبيعات.',
-      variantFormat: 'تُحتسب التركيبات المسماة بصيغة «لون / مقاس».',
       recent: 'أحدث عمليات البيع',
       empty: 'لا توجد بيانات لهذا الاختيار.',
     },
@@ -224,9 +224,10 @@ const { t, locale } = useI18n({
       categories: 'Categories',
       sizes: 'Sizes',
       colors: 'Colors',
+      materials: 'Materials',
+      seasons: 'Seasons',
       customers: 'Customers',
       customerRevenue: 'Customers ranked by total sales value.',
-      variantFormat: 'Rankings include variants named “color / size”.',
       recent: 'Latest sales',
       empty: 'No data for this selection.',
     },
@@ -251,7 +252,7 @@ const dailyMetrics = [
   { key: 'sale_returns', icon: RollbackOutlined },
   { key: 'purchase_returns', icon: UndoOutlined },
 ];
-const rankingKeys = ['products', 'categories', 'sizes', 'colors', 'customers'];
+const rankingKeys = ['products', 'categories', 'sizes', 'colors', 'materials', 'seasons', 'customers'];
 const trendKeys = ['sales', 'purchases'];
 const period = ref('month');
 const warehouseId = ref('');

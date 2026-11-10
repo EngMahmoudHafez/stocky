@@ -29,6 +29,7 @@
             </a-tooltip>
           </a-space>
         </template>
+        <template v-else-if="column.key === 'size_guide'">{{ record.size_guide?.name || '—' }}</template>
       </template>
     </DataTable>
 
@@ -46,6 +47,9 @@
         </a-form-item>
         <a-form-item :label="$t('Namecategorie')" name="name">
           <a-input v-model:value="form.name" />
+        </a-form-item>
+        <a-form-item :label="guideLabel">
+          <a-select v-model:value="form.size_guide_id" :options="sizeGuides" allow-clear show-search option-filter-prop="label" />
         </a-form-item>
         <a-form-item :label="$t('Icon')" name="icon">
           <a-select v-model:value="form.icon" show-search allow-clear :options="iconOptions" :filter-option="filterIcon">
@@ -70,12 +74,15 @@ import { useCrudTable } from '../composables/useCrudTable';
 import { BOOTSTRAP_ICONS } from '../config/bootstrapIcons';
 import http from '../lib/http';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const crud = useCrudTable('categories', { rowsKey: 'categories' });
+const guideLabel = computed(() => locale.value === 'ar' ? 'دليل المقاسات الافتراضي' : 'Default size guide');
+const sizeGuides = computed(() => (crud.payload.value?.size_guides || []).map(guide => ({ value: guide.id, label: guide.name })));
 
 const columns = computed(() => [
   { title: t('Codecategorie'), dataIndex: 'code', key: 'code', sorter: true },
   { title: t('Namecategorie'), dataIndex: 'name', key: 'name', sorter: true },
+  { title: guideLabel.value, key: 'size_guide' },
   { title: t('Icon'), key: 'icon', width: 90 },
   { title: t('Action'), key: 'actions', width: 110, align: 'center' },
 ]);
@@ -97,7 +104,7 @@ const editMode = ref(false);
 const submitting = ref(false);
 const loadingId = ref(null);
 const formRef = ref();
-const form = ref({ id: null, name: '', code: '', icon: '' });
+const form = ref({ id: null, name: '', code: '', icon: '', size_guide_id: undefined });
 
 const rules = computed(() => ({
   name: [{ required: true, message: t('Field_is_required') }],
@@ -106,7 +113,7 @@ const rules = computed(() => ({
 
 function openCreate() {
   editMode.value = false;
-  form.value = { id: null, name: '', code: '', icon: '' };
+  form.value = { id: null, name: '', code: '', icon: '', size_guide_id: undefined };
   modalOpen.value = true;
 }
 
@@ -120,6 +127,7 @@ async function openEdit(record) {
       name: data.name || '',
       code: data.code || '',
       icon: data.icon || '',
+      size_guide_id: data.size_guide_id ?? undefined,
     };
     editMode.value = true;
     modalOpen.value = true;
@@ -141,6 +149,7 @@ async function submit() {
     name: form.value.name,
     code: form.value.code,
     icon: form.value.icon || '',
+    size_guide_id: form.value.size_guide_id ?? null,
   };
   try {
     if (editMode.value) {

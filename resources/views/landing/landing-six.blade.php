@@ -486,7 +486,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $cms['seo']['meta_title'] ?? 'Stocky — Inventory & Stock Management' }}</title>
+    <title>{{ $cms['seo']['meta_title'] ?? 'Inventory — Inventory & Stock Management' }}</title>
     <meta name="description" content="{{ $cms['seo']['meta_description'] ?? '' }}">
 
     @if(!empty($cms['seo']['og_image']))
@@ -668,7 +668,7 @@
     <div class="wrap nav-inner">
         <a href="/" class="brand">
             <span class="brand-icon">S</span>
-            {{ $cms['seo']['meta_title'] ?? 'Stocky' }}
+            {{ $cms['seo']['meta_title'] ?? 'Inventory' }}
         </a>
         <a href="/login" class="nav-cta">Sign in →</a>
     </div>
@@ -919,7 +919,7 @@
             <div>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; color:#fff; font-weight:800; font-size:18px;">
                     <span class="brand-icon">S</span>
-                    {{ $cms['seo']['meta_title'] ?? 'Stocky' }}
+                    {{ $cms['seo']['meta_title'] ?? 'Inventory' }}
                 </div>
                 <p style="line-height:1.7; max-width:320px;">
                     {{ $cms['footer']['copyright'] ?? 'Modern inventory and stock management for teams of every size.' }}
@@ -948,7 +948,7 @@
             </div>
         </div>
         <div class="bottom">
-            {{ $cms['footer']['copyright'] ?? '© '.date('Y').' Stocky. All rights reserved.' }}
+            @include('partials.brand-credit')
         </div>
     </div>
 </footer>

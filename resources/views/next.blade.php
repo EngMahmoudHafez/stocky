@@ -63,7 +63,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <link rel="icon" href="{{ asset('images/' . ($app_settings->favicon ?? 'favicon.ico')) }}">
     <link rel="stylesheet" href="/css/receipt-fonts.css">
-    <title>{{ $app_settings->app_name ?? 'Stocky' }}</title>
+    <title>{{ $app_settings->app_name ?? 'Inventory' }}</title>
     <script>window.__PAGE_TITLE_SUFFIX__ = @json($app_settings->page_title_suffix ?? '');</script>
 
 
@@ -101,7 +101,7 @@
       </style>
       <div class="boot-loader">
         <div class="boot-loader__spinner"></div>
-        <div>{{ $app_settings->app_name ?? 'Stocky' }}</div>
+        <div>{{ $app_settings->app_name ?? 'Inventory' }}</div>
       </div>
     </div>
 
@@ -111,7 +111,7 @@
       <script type="module" src="/js/{{ $entry['file'] }}"></script>
     @else
       <p style="font-family: sans-serif; padding: 24px">
-        Stocky Next assets are not built yet. Run <code>npm run vue3:build</code>.
+        Admin assets are not built yet. Run <code>npm run build:admin</code>.
       </p>
     @endif
   </body>

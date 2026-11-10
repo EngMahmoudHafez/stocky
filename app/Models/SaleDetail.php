@@ -47,6 +47,11 @@ class SaleDetail extends Model
         return $this->belongsTo('App\Models\Product');
     }
 
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
     public function serials()
     {
         return $this->hasMany(ProductSerial::class, 'sale_detail_id');

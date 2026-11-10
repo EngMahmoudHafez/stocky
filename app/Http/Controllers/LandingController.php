@@ -24,13 +24,13 @@ class LandingController extends Controller
         : null;
 
     $settings = array_merge([
-        'app_name'     => 'Stocky SaaS',
-        'company_name' => 'Stocky Inc.',
+        'app_name'     => 'Inventory',
+        'company_name' => 'Inventory',
         'email'        => 'contact@example.com',
         'phone'        => '',
         'website'      => '',
         'address'      => '',
-        'dashboard_footer_text' => '© ' . date('Y') . ' Stocky Inc. — All rights reserved.',
+        'dashboard_footer_text' => '© ' . date('Y') . ' M.H · Implemented by M.H',
     ], $settings);
 
     $template = $cms['landing_template'] ?? 'default';

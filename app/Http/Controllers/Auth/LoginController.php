@@ -40,7 +40,7 @@ class LoginController extends Controller
 
     // Fallback defaults if no settings row exists
     $app_settings = $app_settings ?: (object) [
-        'app_name' => 'Stocky',
+        'app_name' => 'Inventory',
         'logo'     => 'logo.png',
         'favicon'  => 'favicon.ico',
     ];
