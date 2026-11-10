@@ -224,7 +224,7 @@ Route::get('robots.txt', [\App\Http\Controllers\SitemapController::class, 'robot
 // ==================================================================
 // PUBLIC LANDING PAGE
 // ==================================================================
-Route::get('/', [\App\Http\Controllers\LandingController::class, 'index'])->name('landing');
+Route::redirect('/', '/online_store')->name('landing');
 // ==================================================================
 // PUBLIC REGISTRATION (Customer Sign-up)
 // ==================================================================
