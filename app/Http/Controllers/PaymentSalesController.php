@@ -242,8 +242,9 @@ class PaymentSalesController extends BaseController
                     $amount_paid_now += $line_amount;
                     $line_account_id = isset($line['account_id']) && $line['account_id'] ? $line['account_id'] : null;
 
-                    // All payment methods are handled the same way; no online Stripe charge is performed here.
-                    PaymentSale::create([
+                    $paymentContext = app(\App\Services\CashRegisterService::class)->paymentContext(Auth::user(), (int) $sale->warehouse_id,
+                        \App\Models\PaymentMethod::findOrFail($line['payment_method_id'] ?? $request['payment_method_id']), $line_account_id ? (int) $line_account_id : null);
+                    app(\App\Services\CashRegisterService::class)->postSalePayment([
                         'sale_id' => $sale->id,
                         'Ref' => app('App\Http\Controllers\PaymentSalesController')->getNumberOrder(),
                         'date' => $request['date'],
@@ -253,16 +254,8 @@ class PaymentSalesController extends BaseController
                         'change' => isset($line['change']) ? $line['change'] : 0,
                         'notes' => $request['notes'],
                         'user_id' => Auth::user()->id,
-                    ]);
+                    ], $paymentContext);
 
-                    if ($line_account_id) {
-                        $account = Account::find($line_account_id);
-                        if ($account) {
-                            $account->update([
-                                'balance' => $account->balance + $line_amount,
-                            ]);
-                        }
-                    }
                 }
 
                 $total_paid = $sale->paid_amount + $amount_paid_now;
@@ -326,6 +319,8 @@ class PaymentSalesController extends BaseController
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
             $payment = PaymentSale::findOrFail($id);
+            app(\App\Services\CashRegisterService::class)->assertUnlinkedPayment($payment);
+            app(\App\Services\CashRegisterService::class)->lockGeneralAccounts([$payment->account_id, $request->input('account_id')]);
 
             // Check If User Has Permission view All Records
             if (! $view_records) {
@@ -408,6 +403,8 @@ class PaymentSalesController extends BaseController
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
             $payment = PaymentSale::findOrFail($id);
+            app(\App\Services\CashRegisterService::class)->assertUnlinkedPayment($payment);
+            app(\App\Services\CashRegisterService::class)->lockGeneralAccounts([$payment->account_id, $request->input('account_id')]);
 
             // Check If User Has Permission view All Records
             if (! $view_records) {

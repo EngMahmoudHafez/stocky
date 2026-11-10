@@ -12,7 +12,7 @@ class PaymentSaleReturns extends Model
     protected $dates = ['deleted_at'];
 
     protected $fillable = [
-        'sale_return_id', 'date', 'montant', 'change', 'Ref', 'payment_method_id', 'user_id', 'notes', 'account_id',
+        'sale_return_id', 'date', 'montant', 'change', 'Ref', 'payment_method_id', 'user_id', 'notes', 'account_id', 'cash_register_id', 'is_cash',
     ];
 
     protected $casts = [
@@ -22,6 +22,8 @@ class PaymentSaleReturns extends Model
         'user_id' => 'integer',
         'account_id' => 'integer',
         'payment_method_id' => 'integer',
+        'cash_register_id' => 'integer',
+        'is_cash' => 'boolean',
     ];
 
     public function payment_method()

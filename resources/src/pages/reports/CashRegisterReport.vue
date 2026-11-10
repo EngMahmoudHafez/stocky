@@ -53,10 +53,10 @@ import { useCrudTable } from '../../composables/useCrudTable';
 import { useFormat } from '../../composables/useFormat';
 import DateRangePicker from '../../components/DateRangePicker.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { money, dateTime } = useFormat();
 
-const MONEY_KEYS = ['opening_balance', 'cash_in', 'cash_out', 'total_sales', 'closing_balance'];
+const MONEY_KEYS = ['opening_balance', 'cash_in', 'cash_out', 'total_sales', 'cash_refunds', 'closing_balance'];
 
 const range = ref([dayjs().subtract(29, 'day'), dayjs()]);
 const warehouseId = ref(undefined);
@@ -80,13 +80,14 @@ const warehouseOptions = computed(() =>
 );
 
 const columns = computed(() => [
-  { title: t('Cashier'), dataIndex: 'cashier', key: 'cashier', sorter: true },
-  { title: t('warehouse'), dataIndex: 'warehouse', key: 'warehouse' },
+  { title: t('Cashier'), dataIndex: 'cashier_username', key: 'cashier', sorter: true },
+  { title: t('warehouse'), dataIndex: 'warehouse_name', key: 'warehouse' },
   { title: t('Opened'), key: 'opened_at', dataIndex: 'opened_at', sorter: true, exportValue: r => dateTime(r.opened_at) },
   { title: t('Opening'), key: 'opening_balance', dataIndex: 'opening_balance', align: 'right', exportValue: r => money(r.opening_balance) },
   { title: t('Cash In'), key: 'cash_in', dataIndex: 'cash_in', align: 'right', sum: 'money', exportValue: r => money(r.cash_in) },
   { title: t('Cash Out'), key: 'cash_out', dataIndex: 'cash_out', align: 'right', sum: 'money', exportValue: r => money(r.cash_out) },
-  { title: t('TotalSales'), key: 'total_sales', dataIndex: 'total_sales', align: 'right', sum: 'money', exportValue: r => money(r.total_sales) },
+  { title: locale.value === 'ar' ? 'التحصيل النقدي للورديات الجديدة' : 'Cash received (new shifts)', key: 'total_sales', dataIndex: 'total_sales', align: 'right', sum: 'money', exportValue: r => money(r.total_sales) },
+  { title: locale.value === 'ar' ? 'مرتجعات نقدية' : 'Cash refunds', key: 'cash_refunds', dataIndex: 'cash_refunds', align: 'right', exportValue: r => money(r.cash_refunds) },
   { title: t('Closed'), key: 'closed_at', dataIndex: 'closed_at', sorter: true, exportValue: r => (r.closed_at ? dateTime(r.closed_at) : '') },
   { title: t('Closing'), key: 'closing_balance', dataIndex: 'closing_balance', align: 'right', exportValue: r => money(r.closing_balance) },
   { title: t('Difference'), key: 'difference', dataIndex: 'difference', align: 'right', sum: 'money', exportValue: r => money(r.difference) },

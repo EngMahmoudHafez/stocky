@@ -44,6 +44,12 @@
         <a-form-item :label="$t('account_name') + ' *'" name="account_name">
           <a-input v-model:value="form.account_name" :placeholder="$t('Enter_account_name')" />
         </a-form-item>
+        <a-form-item :label="cashLabels.type">
+          <a-select v-model:value="form.account_type" :options="accountTypes" />
+        </a-form-item>
+        <a-form-item v-if="form.account_type === 'cashier'" :label="cashLabels.user" required>
+          <a-select v-model:value="form.cashier_id" :options="cashierOptions" show-search option-filter-prop="label" />
+        </a-form-item>
         <!-- Legacy only takes the opening balance at creation. -->
         <a-form-item v-if="!editMode" :label="$t('initial_balance') + ' *'" name="initial_balance">
           <a-input v-model:value="form.initial_balance" :placeholder="$t('Enter_initial_balance')" />
@@ -74,15 +80,21 @@ import { useCrudTable } from '../../composables/useCrudTable';
 import { useFormat } from '../../composables/useFormat';
 import http from '../../lib/http';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const cashLabels = computed(() => locale.value === 'ar'
+  ? { type: 'نوع الحساب', general: 'حساب عام / بنك', cashier: 'درج كاشير', treasury: 'خزنة', user: 'الكاشير المسؤول' }
+  : { type: 'Account type', general: 'General / bank', cashier: 'Cashier drawer', treasury: 'Treasury', user: 'Assigned cashier' });
+const accountTypes = computed(() => ['general', 'cashier', 'treasury'].map(value => ({ value, label: cashLabels.value[value] })));
 const { money } = useFormat();
 
 const crud = useCrudTable('accounts', { rowsKey: 'accounts' });
 crud.fetchRows();
+const cashierOptions = computed(() => (crud.payload.value?.cashiers || []).map(row => ({ value: row.id, label: row.username })));
 
 const columns = computed(() => [
   { title: t('account_num'), dataIndex: 'account_num', key: 'account_num', sorter: true },
   { title: t('account_name'), dataIndex: 'account_name', key: 'account_name', sorter: true },
+  { title: cashLabels.value.type, dataIndex: 'account_type', key: 'account_type', customRender: ({ text }) => cashLabels.value[text] || text },
   { title: t('balance'), dataIndex: 'balance', key: 'balance', sorter: true, align: 'right', exportValue: r => money(r.balance) },
   { title: t('notes'), dataIndex: 'note', key: 'note', ellipsis: true },
   { title: t('Action'), key: 'actions', width: 110, align: 'center' },
@@ -92,7 +104,7 @@ const modalOpen = ref(false);
 const editMode = ref(false);
 const submitting = ref(false);
 const formRef = ref();
-const form = ref({ id: null, account_num: '', account_name: '', initial_balance: 0, note: '' });
+const form = ref({ id: null, account_num: '', account_name: '', initial_balance: 0, note: '', account_type: 'general', cashier_id: undefined });
 
 const NUM_RE = /^\d*\.?\d*$/;
 const rules = computed(() => ({
@@ -106,7 +118,7 @@ const rules = computed(() => ({
 
 function openCreate() {
   editMode.value = false;
-  form.value = { id: null, account_num: '', account_name: '', initial_balance: 0, note: '' };
+  form.value = { id: null, account_num: '', account_name: '', initial_balance: 0, note: '', account_type: 'general', cashier_id: undefined };
   modalOpen.value = true;
 }
 
@@ -118,6 +130,8 @@ function openEdit(record) {
     account_name: record.account_name,
     initial_balance: 0,
     note: record.note || '',
+    account_type: record.account_type || 'general',
+    cashier_id: record.cashier_id || undefined,
   };
   modalOpen.value = true;
 }
@@ -136,6 +150,8 @@ async function submit() {
         account_num: form.value.account_num,
         account_name: form.value.account_name,
         note: form.value.note,
+        account_type: form.value.account_type,
+        cashier_id: form.value.cashier_id,
       });
       message.success(t('Updated_in_successfully'));
     } else {
@@ -144,6 +160,8 @@ async function submit() {
         account_name: form.value.account_name,
         initial_balance: form.value.initial_balance,
         note: form.value.note,
+        account_type: form.value.account_type,
+        cashier_id: form.value.cashier_id,
       });
       message.success(t('Created_in_successfully'));
     }

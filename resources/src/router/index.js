@@ -56,6 +56,7 @@ const PaymentsReport = lazy('PaymentsReport', () => import('../pages/reports/Pay
 const CustomersReport = lazy('CustomersReport', () => import('../pages/reports/CustomersReport.vue'));
 const SuppliersReport = lazy('SuppliersReport', () => import('../pages/reports/SuppliersReport.vue'));
 const CashRegisterReport = lazy('CashRegisterReport', () => import('../pages/reports/CashRegisterReport.vue'));
+const CashierTreasury = lazy('CashierTreasury', () => import('../pages/accounting/CashierTreasury.vue'));
 const AttendanceReport = lazy('AttendanceReport', () => import('../pages/reports/AttendanceReport.vue'));
 const ServiceJobsReport = lazy('ServiceJobsReport', () => import('../pages/reports/ServiceJobsReport.vue'));
 const ChecklistCompletionReport = lazy('ChecklistCompletionReport', () => import('../pages/reports/ChecklistCompletionReport.vue'));
@@ -713,6 +714,7 @@ const routes = [
             { path: 'products/barcode', name: 'products-barcode', component: Barcode, meta: { title: 'Print Barcode', permission: 'barcode_view' } },
             { path: 'accounts', name: 'accounts', component: Accounts, meta: { title: 'Accounts', permission: 'account' } },
             { path: 'transfer-money', name: 'transfer-money', component: TransferMoney, meta: { title: 'Transfer Money', permission: 'transfer_money' } },
+            { path: 'cashier-treasury', name: 'cashier-treasury', component: CashierTreasury, meta: { title: 'Cashier shifts and treasury', permission: ['Pos_view', 'account', 'transfer_money', 'accounting_dashboard'] } },
             { path: 'expenses', name: 'expenses', component: Expenses, meta: { title: 'Expenses', permission: 'expense_view' } },
             { path: 'expenses/create', name: 'expense-create', component: ExpenseForm, meta: { title: 'Create Expense', permission: 'expense_add' } },
             { path: 'expenses/:id(\\d+)/edit', name: 'expense-edit', component: ExpenseForm, meta: { title: 'Edit Expense', permission: 'expense_edit' } },

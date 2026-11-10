@@ -113,6 +113,7 @@ export const MIGRATED_ROUTES = {
     '/app/products/barcode': '/products/barcode',
     '/app/accounts': '/accounts',
     '/app/transfer_money': '/transfer-money',
+    '/app/cashier-treasury': '/cashier-treasury',
     '/app/expenses/list': '/expenses',
     '/app/expenses/store': '/expenses/create',
     '/app/expenses/category': '/expenses/categories',
@@ -310,6 +311,13 @@ export const MENU = [
         label: 'dashboard',
         to: '/app/dashboard',
         permissions: [],
+    },
+    {
+        key: 'cashier_treasury',
+        icon: 'wallet',
+        label: 'Cashier_Treasury',
+        to: '/app/cashier-treasury',
+        permissions: ['Pos_view', 'account', 'transfer_money', 'accounting_dashboard'],
     },
     {
         key: 'Store',

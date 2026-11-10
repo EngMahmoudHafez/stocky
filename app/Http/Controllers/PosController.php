@@ -32,6 +32,7 @@ use App\Models\Warehouse;
 use App\Services\BatchService;
 use App\Services\PromotionEngine;
 use App\Services\SerialNumberService;
+use App\Services\CashRegisterService;
 use App\utils\helpers;
 use Carbon\Carbon;
 use DB;
@@ -97,7 +98,8 @@ class PosController extends BaseController
             'client_id' => 'required',
             'warehouse_id' => 'required',
             'payments' => 'required|array|min:1',
-            'payments.*.amount' => 'required|numeric',
+            'payments.*.amount' => 'required|numeric|min:0',
+            'payments.*.account_id' => 'nullable|integer|exists:accounts,id',
             'payments.*.payment_method_id' => 'required|integer|exists:payment_methods,id',
         ]);
 
@@ -363,8 +365,10 @@ class PosController extends BaseController
                 foreach ($request->payments as $index => $payment) {
                     if (isset($payment['amount']) && $payment['amount'] > 0) {
                         $paymentMethodName = $paymentMethodNames->get($payment['payment_method_id']);
-                        // Prefer per-line account selection; no global account fallback
-                        $accountId = $payment['account_id'] ?? null;
+                        $paymentContext = app(CashRegisterService::class)->paymentContext($user, (int) $order->warehouse_id,
+                            PaymentMethod::findOrFail($payment['payment_method_id']),
+                            !empty($payment['account_id']) ? (int) $payment['account_id'] : null);
+                        $accountId = $paymentContext['account_id'];
 
                         $originalAmount = $payment['amount'];
                         $paymentAmount = $originalAmount;
@@ -454,7 +458,7 @@ class PosController extends BaseController
                         }
 
 
-                        $paymentSale = PaymentSale::create([
+                        $paymentSale = app(CashRegisterService::class)->postSalePayment([
                             'sale_id' => $order->id,
                             'account_id' => $accountId,
                             'Ref' => app('App\\Http\\Controllers\\PaymentSalesController')->getNumberOrder(),
@@ -464,7 +468,7 @@ class PosController extends BaseController
                             'change' => $changeReturn,
                             'notes' => $request['payment_note'] ?? null,
                             'user_id' => Auth::user()->id,
-                        ]);
+                        ], $paymentContext);
 
 
 
@@ -489,12 +493,6 @@ class PosController extends BaseController
                             ]);
                         }
 
-                        if ($accountId) {
-                            $account = Account::find($accountId);
-                            if ($account) {
-                                $account->update(['balance' => $account->balance + $paymentAmount]);
-                            }
-                        }
                     }
                 }
 
@@ -1253,6 +1251,7 @@ class PosController extends BaseController
 
                 try {
 
+                    $request->merge(['amount' => min(max(0, (float) $request['amount']), max(0, $sale->GrandTotal - $sale->paid_amount))]);
                     $total_paid = $sale->paid_amount + $request['amount'];
                     $due = $sale->GrandTotal - $total_paid;
 
@@ -1265,7 +1264,12 @@ class PosController extends BaseController
                     }
 
                     if ($request['amount'] > 0) {
-                        $paymentMethodName = PaymentMethod::whereKey($request->payment['payment_method_id'])->value('name');
+                        $paymentMethod = PaymentMethod::findOrFail($request->payment['payment_method_id']);
+                        $paymentContext = app(CashRegisterService::class)->paymentContext(
+                            $request->user('api'), (int) $order->warehouse_id, $paymentMethod,
+                            !empty($request->payment['account_id']) ? (int) $request->payment['account_id'] : null
+                        );
+                        $paymentMethodName = $paymentMethod->name;
                         if (strtolower(trim((string) $paymentMethodName)) === 'credit card') {
 
                             $Client = Client::whereId($request->client_id)->first();
@@ -1316,28 +1320,16 @@ class PosController extends BaseController
                                 $PaymentCard['customer_stripe_id'] = $customer_id;
                             }
 
-                            $PaymentSale = new PaymentSale;
-                            $PaymentSale->sale_id = $order->id;
-                            $PaymentSale->Ref = app('App\Http\Controllers\PaymentSalesController')->getNumberOrder();
-                            $PaymentSale->date = Carbon::now();
-                            $PaymentSale->payment_method_id = $request->payment['payment_method_id'];
-                            $PaymentSale->montant = $request['amount'];
-                            $PaymentSale->change = $request['change'];
-                            $PaymentSale->notes = $request->payment['notes'];
-                            $PaymentSale->user_id = Auth::user()->id;
-                            $PaymentSale->account_id = $request->payment['account_id'] ? $request->payment['account_id'] : null;
-
-                            $PaymentSale->save();
-
-                            $account = Account::where('id', $request->payment['account_id'])->exists();
-
-                            if ($account) {
-                                // Account exists, perform the update
-                                $account = Account::find($request->payment['account_id']);
-                                $account->update([
-                                    'balance' => $account->balance + $request['amount'],
-                                ]);
-                            }
+                            $PaymentSale = app(CashRegisterService::class)->postSalePayment([
+                                'sale_id' => $order->id,
+                                'Ref' => app('App\Http\Controllers\PaymentSalesController')->getNumberOrder(),
+                                'date' => Carbon::now(),
+                                'payment_method_id' => $request->payment['payment_method_id'],
+                                'montant' => $request['amount'],
+                                'change' => $request['change'],
+                                'notes' => $request->payment['notes'] ?? null,
+                                'user_id' => Auth::user()->id,
+                            ], $paymentContext);
 
                             $sale->update([
                                 'paid_amount' => $total_paid,
@@ -1352,27 +1344,16 @@ class PosController extends BaseController
                             // Paying Method Cash
                         } else {
 
-                            PaymentSale::create([
+                            app(CashRegisterService::class)->postSalePayment([
                                 'sale_id' => $order->id,
-                                'account_id' => $request->payment['account_id'] ? $request->payment['account_id'] : null,
                                 'Ref' => app('App\Http\Controllers\PaymentSalesController')->getNumberOrder(),
                                 'date' => Carbon::now(),
                                 'payment_method_id' => $request->payment['payment_method_id'],
                                 'montant' => $request['amount'],
                                 'change' => $request['change'],
-                                'notes' => $request->payment['notes'],
+                                'notes' => $request->payment['notes'] ?? null,
                                 'user_id' => Auth::user()->id,
-                            ]);
-
-                            $account = Account::where('id', $request->payment['account_id'])->exists();
-
-                            if ($account) {
-                                // Account exists, perform the update
-                                $account = Account::find($request->payment['account_id']);
-                                $account->update([
-                                    'balance' => $account->balance + $request['amount'],
-                                ]);
-                            }
+                            ], $paymentContext);
 
                             $sale->update([
                                 'paid_amount' => $total_paid,
@@ -1493,7 +1474,7 @@ class PosController extends BaseController
         $this->authorizeForUser($request->user('api'), 'Sales_pos', Sale::class);
         $clients = Client::where('deleted_at', '=', null)->get(['id', 'name', 'phone']);
         $settings = Setting::where('deleted_at', '=', null)->with('Client')->first();
-        $accounts = Account::where('deleted_at', '=', null)->orderBy('id', 'desc')->get(['id', 'account_name']);
+        $accounts = Account::where('deleted_at', '=', null)->orderBy('id', 'desc')->get(['id', 'account_name', 'account_type', 'cashier_id']);
 
         $draft_sale_data = DraftSale::with('details.product.unitSale')->where('deleted_at', '=', null)->findOrFail($id);
 
@@ -1693,7 +1674,7 @@ class PosController extends BaseController
         $categories = Category::where('deleted_at', '=', null)->get(['id', 'name']);
         $brands = Brand::where('deleted_at', '=', null)->get();
         $stripe_key = config('app.STRIPE_KEY');
-        $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name']);
+        $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name', 'is_cash']);
 
         return response()->json([
             'stripe_key' => $stripe_key,
@@ -2103,7 +2084,7 @@ class PosController extends BaseController
         $this->authorizeForUser($request->user('api'), 'Sales_pos', Sale::class);
         $clients = Client::where('deleted_at', '=', null)->get(['id', 'name', 'phone']);
         $settings = Setting::where('deleted_at', '=', null)->with('Client')->first();
-        $accounts = Account::where('deleted_at', '=', null)->orderBy('id', 'desc')->get(['id', 'account_name']);
+        $accounts = Account::where('deleted_at', '=', null)->orderBy('id', 'desc')->get(['id', 'account_name', 'account_type', 'cashier_id']);
 
         // get warehouses assigned to user
         $user_auth = auth()->user();
@@ -2163,7 +2144,7 @@ class PosController extends BaseController
         $stripe_key = config('app.STRIPE_KEY');
         $pos_setting = PosSetting::where('deleted_at', '=', null)->first();
         $products_per_page = $pos_setting ? $pos_setting->products_per_page : 12;
-        $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name']);
+        $payment_methods = PaymentMethod::where('deleted_at', '=', null)->get(['id', 'name', 'is_cash']);
         $languages_available = Language::supported()->where('is_active', true)->get(['name', 'locale', 'flag']);
 
         return response()->json([

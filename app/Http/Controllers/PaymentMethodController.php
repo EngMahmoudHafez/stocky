@@ -54,10 +54,12 @@ class PaymentMethodController extends BaseController
 
         request()->validate([
             'name' => 'required',
+            'is_cash' => 'sometimes|boolean',
         ]);
 
         PaymentMethod::create([
             'name' => $request['name'],
+            'is_cash' => $request->boolean('is_cash'),
         ]);
 
         return response()->json(['success' => true]);
@@ -79,10 +81,12 @@ class PaymentMethodController extends BaseController
 
         request()->validate([
             'name' => 'required',
+            'is_cash' => 'sometimes|boolean',
         ]);
 
         PaymentMethod::whereId($id)->update([
             'name' => $request['name'],
+            'is_cash' => $request->has('is_cash') ? $request->boolean('is_cash') : PaymentMethod::findOrFail($id)->is_cash,
         ]);
 
         return response()->json(['success' => true]);

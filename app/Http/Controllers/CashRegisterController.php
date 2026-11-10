@@ -8,40 +8,26 @@ use App\Models\Sale;
 use App\Models\User;
 use App\Models\UserWarehouse;
 use App\Models\Warehouse;
+use App\Services\CashRegisterAccess;
+use App\Services\CashRegisterService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CashRegisterController extends BaseController
 {
-    public function openRegister(Request $request)
+    public function openRegister(Request $request, CashRegisterService $registers)
     {
         $this->authorizeForUser($request->user('api'), 'Sales_pos', Sale::class);
 
         $data = $request->validate([
             'warehouse_id' => 'required|integer|exists:warehouses,id',
-            'opening_balance' => 'required|numeric',
+            'account_id' => 'required|integer|exists:accounts,id',
+            'opening_balance' => 'required|numeric|min:0|decimal:0,2',
             'notes' => 'nullable|string',
         ]);
 
-        $user_id = Auth::user()->id;
-
-        $existing = CashRegister::where('user_id', $user_id)
-            ->where('warehouse_id', $data['warehouse_id'])
-            ->where('status', 'open')
-            ->first();
-        if ($existing) {
-            return response()->json(['success' => false, 'message' => 'Register already open'], 409);
-        }
-
-        $register = CashRegister::create([
-            'user_id' => $user_id,
-            'warehouse_id' => $data['warehouse_id'],
-            'opening_balance' => $data['opening_balance'],
-            'status' => 'open',
-            'opened_at' => Carbon::now(),
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $register = $registers->open($request->user('api'), $data);
 
         return response()->json(['success' => true, 'register' => $register]);
     }
@@ -59,6 +45,9 @@ class CashRegisterController extends BaseController
             $query->where('warehouse_id', $warehouseId);
         }
         $register = $query->orderByDesc('id')->first();
+        if ($register) {
+            app(CashRegisterAccess::class)->authorize($request->user('api'), $register);
+        }
 
         return response()->json(['success' => true, 'register' => $register]);
     }
@@ -75,6 +64,8 @@ class CashRegisterController extends BaseController
         ]);
 
         $register = CashRegister::findOrFail($data['register_id']);
+        app(CashRegisterAccess::class)->authorize($request->user('api'), $register);
+        abort_if($register->account_id !== null, 422, __('cashier.active_account'));
         if ($register->status !== 'open') {
             return response()->json(['success' => false, 'message' => 'Register is closed'], 409);
         }
@@ -92,56 +83,26 @@ class CashRegisterController extends BaseController
         return response()->json(['success' => true, 'register' => $register]);
     }
 
-    public function closeRegister(Request $request)
+    public function closeRegister(Request $request, CashRegisterService $registers)
     {
         $this->authorizeForUser($request->user('api'), 'Sales_pos', Sale::class);
 
         $data = $request->validate([
             'register_id' => 'required|integer|exists:cash_registers,id',
-            'counted_cash' => 'required|numeric',
+            'counted_cash' => 'required|numeric|min:0|decimal:0,2',
             'closing_balance' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
 
-        $register = CashRegister::findOrFail($data['register_id']);
-        if ($register->status !== 'open') {
-            return response()->json(['success' => false, 'message' => 'Register already closed'], 409);
-        }
-
-        $now = Carbon::now();
-        $from = $register->opened_at;
-        $to = $now;
-
-        $totalSales = Sale::whereNull('deleted_at')
-            ->where('is_pos', 1)
-            ->where('user_id', $register->user_id)
-            ->where('warehouse_id', $register->warehouse_id)
-            ->whereBetween('created_at', [$from, $to])
-            ->sum('GrandTotal');
-
-        $register->total_sales = $totalSales;
-
-        $expectedCash = ($register->opening_balance ?? 0) + ($register->cash_in ?? 0) - ($register->cash_out ?? 0) + ($register->total_sales ?? 0);
-        $counted = (float) $data['counted_cash'];
-        $difference = $counted - $expectedCash;
-
-        $register->closing_balance = $data['closing_balance'] ?? $counted;
-        $register->difference = $difference;
-        $register->status = 'closed';
-        $register->closed_at = $now;
-        
-        if (! empty($data['notes'])) {
-            $register->notes = trim(($register->notes ?? '')."\n".$data['notes']);
-        }
-        $register->save();
+        $register = $registers->close($request->user('api'), $data['register_id'], $data);
 
         return response()->json([
             'success' => true,
             'register' => $register,
             'summary' => [
-                'expected_cash' => $expectedCash,
-                'counted_cash' => $counted,
-                'difference' => $difference,
+                'expected_cash' => round($register->closing_balance - $register->difference, 2),
+                'counted_cash' => $register->closing_balance,
+                'difference' => $register->difference,
             ],
         ]);
     }
@@ -255,6 +216,7 @@ class CashRegisterController extends BaseController
             $item['opening_balance'] = number_format((float) $r->opening_balance, 2, '.', '');
             $item['cash_in'] = number_format((float) $r->cash_in, 2, '.', '');
             $item['cash_out'] = number_format((float) $r->cash_out, 2, '.', '');
+            $item['cash_refunds'] = number_format((float) $r->cash_refunds, 2, '.', '');
             $item['total_sales'] = number_format((float) $r->total_sales, 2, '.', '');
             $item['closing_balance'] = is_null($r->closing_balance) ? null : number_format((float) $r->closing_balance, 2, '.', '');
             $item['difference'] = is_null($r->difference) ? null : number_format((float) $r->difference, 2, '.', '');

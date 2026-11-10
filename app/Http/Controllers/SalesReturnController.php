@@ -307,6 +307,7 @@ class SalesReturnController extends BaseController
     {
 
         $this->authorizeForUser($request->user('api'), 'update', SaleReturn::class);
+        app(\App\Services\CashRegisterService::class)->assertReturnMutable((int) $id);
 
         \DB::transaction(function () use ($request, $id) {
             $user = Auth::user();
@@ -553,6 +554,7 @@ class SalesReturnController extends BaseController
     public function destroy(Request $request, $id)
     {
         $this->authorizeForUser($request->user('api'), 'delete', SaleReturn::class);
+        app(\App\Services\CashRegisterService::class)->assertReturnMutable((int) $id);
 
         \DB::transaction(function () use ($id, $request) {
             $user = Auth::user();
@@ -702,6 +704,7 @@ class SalesReturnController extends BaseController
             $view_records = $user->hasRecordView();
             $selectedIds = $request->selectedIds;
             foreach ($selectedIds as $SaleReturn_id) {
+                app(\App\Services\CashRegisterService::class)->assertReturnMutable((int) $SaleReturn_id);
 
                 $current_SaleReturn = SaleReturn::findOrFail($SaleReturn_id);
 

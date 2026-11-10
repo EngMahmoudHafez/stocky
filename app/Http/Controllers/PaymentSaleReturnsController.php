@@ -219,7 +219,10 @@ class PaymentSaleReturnsController extends BaseController
                     $payment_statut = 'unpaid';
                 }
 
-                PaymentSaleReturns::create([
+                $paymentContext = app(\App\Services\CashRegisterService::class)->paymentContext($user, (int) $SaleReturn->warehouse_id,
+                    \App\Models\PaymentMethod::findOrFail($request['payment_method_id']),
+                    $request->filled('account_id') ? (int) $request['account_id'] : null);
+                app(\App\Services\CashRegisterService::class)->postRefundPayment([
                     'sale_return_id' => $request['sale_return_id'],
                     'account_id' => $request['account_id'] ? $request['account_id'] : null,
                     'Ref' => $this->getNumberOrder(),
@@ -229,17 +232,7 @@ class PaymentSaleReturnsController extends BaseController
                     'change' => $request['change'],
                     'notes' => $request['notes'],
                     'user_id' => Auth::user()->id,
-                ]);
-
-                $account = Account::where('id', $request['account_id'])->exists();
-
-                if ($account) {
-                    // Account exists, perform the update
-                    $account = Account::find($request['account_id']);
-                    $account->update([
-                        'balance' => $account->balance - $request['montant'],
-                    ]);
-                }
+                ], $paymentContext);
 
                 $SaleReturn->update([
                     'paid_amount' => $total_paid,
@@ -273,6 +266,8 @@ class PaymentSaleReturnsController extends BaseController
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
             $payment = PaymentSaleReturns::findOrFail($id);
+            app(\App\Services\CashRegisterService::class)->assertUnlinkedPayment($payment);
+            app(\App\Services\CashRegisterService::class)->lockGeneralAccounts([$payment->account_id, $request->input('account_id')]);
 
             // Check If User Has Permission view All Records
             if (! $view_records) {
@@ -346,6 +341,8 @@ class PaymentSaleReturnsController extends BaseController
             // Backward compatibility: If record_view is null, fall back to role permission check
             $view_records = $user->hasRecordView();
             $payment = PaymentSaleReturns::findOrFail($id);
+            app(\App\Services\CashRegisterService::class)->assertUnlinkedPayment($payment);
+            app(\App\Services\CashRegisterService::class)->lockGeneralAccounts([$payment->account_id, $request->input('account_id')]);
 
             // Check If User Has Permission view All Records
             if (! $view_records) {

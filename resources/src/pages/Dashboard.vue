@@ -240,6 +240,7 @@ const { t, locale } = useI18n({
       customerRevenue: 'ترتيب العملاء حسب إجمالي قيمة المبيعات.',
       recent: 'أحدث عمليات البيع',
       empty: 'لا توجد بيانات لهذا الاختيار.',
+      cashierTreasury: 'يومية الكاشير والتوريد',
       quickActions: 'اختصارات العمل',
       newSale: 'فاتورة بيع جديدة',
       pointOfSale: 'نقطة البيع',
@@ -295,6 +296,7 @@ const { t, locale } = useI18n({
       customerRevenue: 'Customers ranked by total sales value.',
       recent: 'Latest sales',
       empty: 'No data for this selection.',
+      cashierTreasury: 'Cashier shifts and treasury',
       quickActions: 'Quick actions',
       newSale: 'New sales invoice',
       pointOfSale: 'Point of sale',
@@ -343,6 +345,7 @@ const periodMetrics = [
   { key: 'unpaid', icon: WalletOutlined, hint: 'unpaidHint' },
 ];
 const actionEntries = [
+  { key: 'cashierTreasury', to: '/cashier-treasury', permissions: ['Pos_view', 'account', 'transfer_money', 'accounting_dashboard'], icon: WalletOutlined },
   { key: 'newSale', to: '/sales/create', permissions: ['Sales_add'], icon: FileTextOutlined },
   { key: 'pointOfSale', to: '/pos', permissions: ['Pos_view'], icon: ShoppingCartOutlined },
   { key: 'onlineOrders', to: '/store/orders', permissions: ['Orders_view'], icon: ShopOutlined },

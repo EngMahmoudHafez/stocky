@@ -141,7 +141,7 @@
                         </div>
                         <div class="input-field">
                           <label class="field-label">{{$t('Account')}}</label>
-                          <select v-model="p.accountId" class="form-select">
+                          <select v-model="p.accountId" class="form-select" :disabled="isCashLine(p) && !!cashAccountId">
                             <option value="">{{$t('Select_Account')}}</option>
                             <option v-for="a in resolvedAccounts" :key="a.id" :value="a.id">{{ a.account_name || a.name }}</option>
                           </select>
@@ -350,6 +350,7 @@ export default {
     isOnline: { type: Boolean, default: true },
     // System defaults from settings (used when opening modal and when adding new payment lines)
     defaultAccountId: { type: [Number, String], default: null },
+    cashAccountId: { type: [Number, String], default: null },
     defaultPaymentMethodId: { type: [Number, String], default: null }
   },
   data() {
@@ -390,6 +391,9 @@ export default {
     };
   },
   watch: {
+    cashAccountId(id) {
+      this.paymentLines.forEach(line => { if (this.isCashLine(line)) line.accountId = id || ''; });
+    },
     clientId: {
       immediate: true,
       handler() { this.fetchWalletBalance(); }
@@ -513,6 +517,7 @@ export default {
         return;
       }
       line.paymentMethodId = method.id;
+      line.accountId = this.isCashMethod(method) ? (this.cashAccountId || '') : this.getDefaultAccountId();
       const idx = (this.paymentLines || []).indexOf(line);
 
       if (this.isCreditCardMethod(method)) {
@@ -545,7 +550,10 @@ export default {
       return 'wallet';
     },
     isCashMethod(method) {
-      return /cash|نقد|كاش/i.test(method?.name ?? '');
+      return method?.is_cash === undefined ? /cash|نقد|كاش/i.test(method?.name ?? '') : !!method.is_cash;
+    },
+    isCashLine(line) {
+      return this.isCashMethod(this.resolvedPaymentMethods.find(method => String(method.id) === String(line.paymentMethodId)));
     },
     getCashMethodId() {
       return this.resolvedPaymentMethods.find(this.isCashMethod)?.id ?? null;
@@ -593,7 +601,7 @@ export default {
         return;
       }
       const defaultMethodId = this.getDefaultPaymentMethodId();
-      const defaultAccountId = this.getDefaultAccountId();
+      const defaultAccountId = this.isCashMethod(this.resolvedPaymentMethods.find(method => String(method.id) === String(defaultMethodId))) ? (this.cashAccountId || '') : this.getDefaultAccountId();
       this.paymentLines.push({ amount: 0, paymentMethodId: defaultMethodId, accountId: defaultAccountId || this.paymentForm.accountId || '' });
     },
     removePaymentLine(index) {
@@ -1254,7 +1262,7 @@ export default {
       this.destroyAllCardElements && this.destroyAllCardElements();
       this.activeCardLineIndex = 0;
       const defaultMethodId = this.getDefaultPaymentMethodId();
-      const defaultAccountId = this.getDefaultAccountId();
+      const defaultAccountId = this.isCashMethod(this.resolvedPaymentMethods.find(method => String(method.id) === String(defaultMethodId))) ? (this.cashAccountId || '') : this.getDefaultAccountId();
       this.paymentForm.accountId = defaultAccountId;
       this.paymentLines.push({ amount: Number(this.paymentForm.amountDue || 0), paymentMethodId: defaultMethodId, accountId: defaultAccountId });
       this.paymentNote = '';

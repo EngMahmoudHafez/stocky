@@ -22,10 +22,16 @@ class CashRegister extends Model
         'opened_at',
         'closed_at',
         'notes',
+        'account_id',
+        'cash_refunds',
+        'cash_summary_version',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
+        'account_id' => 'integer',
+        'cash_refunds' => 'double',
+        'cash_summary_version' => 'integer',
         'warehouse_id' => 'integer',
         'opening_balance' => 'double',
         'closing_balance' => 'double',
@@ -45,5 +51,10 @@ class CashRegister extends Model
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class);
     }
 }

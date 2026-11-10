@@ -608,8 +608,10 @@ Route::middleware(['auth:api', 'Is_Active', 'request.safety', 'token.timeout'])-
     Route::post('pos/submit_sale_from_draft', 'PosController@submit_sale_from_draft');
 
     // ---------------------- Cash Registers (optional module) ----------------------\\
-    // Fully additive; no changes to existing tables or logic
     Route::post('cash-registers/open', 'CashRegisterController@openRegister');
+    Route::get('cash-registers/workspace', 'CashierTreasuryController@index');
+    Route::post('cash-registers/handover', 'CashierTreasuryController@handover');
+    Route::post('cash-registers/close-shift', 'CashierTreasuryController@close');
     Route::post('cash-registers/close', 'CashRegisterController@closeRegister');
     Route::get('cash-registers/current/{user_id}', 'CashRegisterController@getCurrentRegister');
     Route::post('cash-registers/cash-move', 'CashRegisterController@cashInOut');

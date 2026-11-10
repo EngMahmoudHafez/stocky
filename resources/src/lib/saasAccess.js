@@ -105,7 +105,7 @@ export function featureKeyForPath(path) {
     const p = String(path || '').split('?')[0].replace(/^\/+/, '').toLowerCase();
     if (!p) return 'dashboard';
     const exact = {
-        dashboard: 'dashboard', pos: 'sales_pos',
+        dashboard: 'dashboard', pos: 'sales_pos', 'cashier-treasury': 'sales_pos',
         products: 'products', sales: 'sales', purchases: 'purchases', quotations: 'quotations',
         'sale-returns': 'sales_return', 'purchase-returns': 'purchases_return',
         adjustments: 'adjustment', transfers: 'transfer', damages: 'damages',

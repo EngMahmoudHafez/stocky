@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
+use App\Models\CashRegisterHandover;
 use App\Models\TransferMoney;
+use App\Services\CashRegisterService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -82,7 +84,7 @@ class TransferMoneyController extends BaseController
         request()->validate([
             'from_account_id' => 'required|different:to_account_id',
             'to_account_id' => 'required|different:from_account_id',
-            'amount' => 'required',
+            'amount' => 'required|numeric|gt:0|decimal:0,2|max:999999999999.99',
             'date' => 'required',
         ],
             [
@@ -91,13 +93,14 @@ class TransferMoneyController extends BaseController
             ]);
 
         // Additional check if from_account_id and to_account_id are not the same
-        if ($request->from_account_id === $request->to_account_id) {
+        if ((int) $request->from_account_id === (int) $request->to_account_id) {
             return response()->json(['error' => 'Account From and to account cannot be the same.'], 400);
         }
 
         // Retrieve account balances
         $from_account = Account::findOrFail($request->from_account_id);
         $to_account = Account::findOrFail($request->to_account_id);
+        app(CashRegisterService::class)->assertNoOpenDrawerMovement([$from_account->id, $to_account->id]);
 
         // Check if from_account has enough balance
         if ($from_account->balance < $request->amount) {
@@ -105,6 +108,10 @@ class TransferMoneyController extends BaseController
         }
 
         \DB::transaction(function () use ($request, $from_account, $to_account) {
+            app(CashRegisterService::class)->lockGeneralAccounts([$from_account->id, $to_account->id]);
+            $from_account->refresh();
+            $to_account->refresh();
+            abort_if($from_account->balance < $request->amount, 422, __('cashier.insufficient'));
 
             $from_account->update([
                 'balance' => $from_account->balance - $request->amount,
@@ -141,9 +148,11 @@ class TransferMoneyController extends BaseController
         $this->authorizeForUser($request->user('api'), 'update', TransferMoney::class);
 
         $transfer = TransferMoney::findOrFail($id);
+        abort_if(CashRegisterHandover::where('transfer_money_id', $id)->exists(), 422, __('cashier.immutable'));
+        app(CashRegisterService::class)->assertNoOpenDrawerMovement([$transfer->from_account_id, $transfer->to_account_id]);
 
         request()->validate([
-            'amount' => 'required',
+            'amount' => 'required|numeric|gt:0|decimal:0,2|max:999999999999.99',
             'date' => 'required',
         ]);
 
@@ -152,7 +161,7 @@ class TransferMoneyController extends BaseController
         $to_account = Account::findOrFail($transfer->to_account_id);
 
         // Additional check if from_account_id and to_account_id are not the same
-        if ($request->from_account_id === $request->to_account_id) {
+        if ((int) $request->from_account_id === (int) $request->to_account_id) {
             return response()->json(['error' => 'Account From and to account cannot be the same.'], 400);
         }
 
@@ -162,6 +171,10 @@ class TransferMoneyController extends BaseController
         }
 
         \DB::transaction(function () use ($request, $from_account, $to_account, $transfer) {
+            app(CashRegisterService::class)->lockGeneralAccounts([$from_account->id, $to_account->id]);
+            $from_account->refresh();
+            $to_account->refresh();
+            abort_if($from_account->balance + $transfer->amount < $request->amount, 422, __('cashier.insufficient'));
 
             $from_account->update([
                 'balance' => $from_account->balance + $transfer->amount - $request->amount,
@@ -191,7 +204,10 @@ class TransferMoneyController extends BaseController
         \DB::transaction(function () use ($id) {
 
             $transfer = TransferMoney::findOrFail($id);
+            abort_if(CashRegisterHandover::where('transfer_money_id', $id)->exists(), 422, __('cashier.immutable'));
+            app(CashRegisterService::class)->assertNoOpenDrawerMovement([$transfer->from_account_id, $transfer->to_account_id]);
 
+            app(CashRegisterService::class)->lockGeneralAccounts([$transfer->from_account_id, $transfer->to_account_id]);
             // Retrieve account
             $from_account = Account::findOrFail($transfer->from_account_id);
             $to_account = Account::findOrFail($transfer->to_account_id);

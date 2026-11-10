@@ -23,7 +23,7 @@
         <button
           v-if="isOnline"
           type="button"
-          @click="(currentRegister && currentRegister.status === 'open') ? $bvModal.show('CloseRegisterModal') : $bvModal.show('OpenRegisterModal')"
+          @click="$router.push('/cashier-treasury')"
           :title="(currentRegister && currentRegister.status === 'open') ? $t('Close Register') : $t('Open Register')"
           style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: inherit; text-transform: uppercase; cursor: pointer; border: 0;"
           :style="{ background: (currentRegister && currentRegister.status === 'open') ? '#eaf7ef' : '#fdecec', color: (currentRegister && currentRegister.status === 'open') ? '#1e7a44' : '#a83232' }">
@@ -1109,6 +1109,7 @@
     :payment-methods="payment_methods"
     :accounts="accounts"
     :default-account-id="default_account_id"
+    :cash-account-id="currentRegister && currentRegister.account_id"
     :default-payment-method-id="default_payment_method_id"
     :currency="currentUser.currency"
     :client-id="selectedClientId"
@@ -2924,41 +2925,6 @@
     </div>
   </b-modal>
 
-    <b-modal id="OpenRegisterModal" :title="$t('Open Register')" hide-footer>
-      <div class="form-group">
-        <label>{{$t('warehouse')}}</label>
-        <b-form-select v-model="registerForm.warehouse_id" :options="warehouseOptions"></b-form-select>
-      </div>
-      <div class="form-group">
-        <label>{{$t('Opening_Balance')}}</label>
-        <input type="text" min="0" step="0.01" class="form-control" v-model.number="registerForm.opening_balance" />
-      </div>
-      <div class="form-group">
-        <label>{{$t('notes')}}</label>
-        <textarea class="form-control" v-model="registerForm.notes"></textarea>
-      </div>
-      <div class="text-right">
-        <b-button variant="secondary" class="mr-2" @click="$bvModal.hide('OpenRegisterModal')">{{$t('Cancel')}}</b-button>
-        <b-button variant="success" @click="submitOpenRegister" :disabled="registerBusy">{{$t('Open Register')}}</b-button>
-      </div>
-    </b-modal>
-
-    <!-- Close Register Modal -->
-    <b-modal id="CloseRegisterModal" :title="$t('Close Register')" hide-footer>
-      <div class="form-group">
-        <label>{{$t('Counted_Cash')}}</label>
-        <input type="text" min="0" step="0.01" class="form-control" v-model.number="closeForm.counted_cash" />
-      </div>
-      <div class="form-group">
-        <label>{{$t('Closing_Notes')}}</label>
-        <textarea class="form-control" v-model="closeForm.notes"></textarea>
-      </div>
-      <div class="text-right">
-        <b-button variant="secondary" class="mr-2" @click="$bvModal.hide('CloseRegisterModal')">{{$t('Cancel')}}</b-button>
-        <b-button variant="danger" @click="submitCloseRegister" :disabled="registerBusy">{{$t('Close Register')}}</b-button>
-      </div>
-    </b-modal>
-
     <!-- Online reload confirmation modal (non-blocking) -->
     <b-modal
       id="OnlineReloadModal"
@@ -3775,11 +3741,6 @@ export default {
       // Cash Register state (optional module)
       registerEnabled: true,
       currentRegister: null,
-      registerBusy: false,
-      registerForm: { warehouse_id: '', opening_balance: 0, notes: '' },
-      closeForm: { counted_cash: 0, notes: '' },
-      cashMove: { type: 'in', amount: 0, notes: '' },
-      warehouseOptions: [],
       selectedClientId: "",
       productsReady: false,
       uiLoadingProductId: null,
@@ -4510,51 +4471,6 @@ export default {
         };
         this._cd_emit(payload);
       }, 200); // small debounce
-    },
-    async submitOpenRegister() {
-      if (!this.registerForm.warehouse_id) {
-        this.makeToast('warning', this.$t('Please_select_warehouse'), this.$t('Warning'));
-        return;
-      }
-      this.registerBusy = true;
-      try {
-        const { data } = await axios.post('cash-registers/open', {
-          user_id: this.currentUser.id,
-          warehouse_id: this.registerForm.warehouse_id,
-          opening_balance: this.registerForm.opening_balance || 0,
-          notes: this.registerForm.notes || ''
-        });
-        this.$bvModal.hide('OpenRegisterModal');
-        this.makeToast('success', this.$t('RegisterOpened'), this.$t('Success'));
-        // Immediately reflect UI without waiting for fetch
-        this.currentRegister = data && data.register ? data.register : this.currentRegister;
-        // Fallback refresh to ensure latest from server
-        this.refreshCurrentRegister();
-      } catch (e) {
-        const msg = e.response?.data?.message || this.$t('OperationFailed');
-        this.makeToast('danger', msg, this.$t('Failed'));
-      } finally {
-        this.registerBusy = false;
-      }
-    },
-    async submitCloseRegister() {
-      if (!this.currentRegister) return;
-      this.registerBusy = true;
-      try {
-        await axios.post('cash-registers/close', {
-          register_id: this.currentRegister.id,
-          counted_cash: this.closeForm.counted_cash || 0,
-          notes: this.closeForm.notes || ''
-        });
-        this.$bvModal.hide('CloseRegisterModal');
-        this.makeToast('success', this.$t('RegisterClosed'), this.$t('Success'));
-        this.refreshCurrentRegister();
-      } catch (e) {
-        const msg = e.response?.data?.message || this.$t('OperationFailed');
-        this.makeToast('danger', msg, this.$t('Failed'));
-      } finally {
-        this.registerBusy = false;
-      }
     },
     resolveProductImage(imagePath) {
       if (!imagePath) return '';
@@ -9869,20 +9785,8 @@ export default {
 
     this.GetElementsPos(); // This will fetch fresh data and rebuild the cache when online
     this.addPaymentLine();
-    // Initialize warehouse options and sync selection once data is loaded
-    this.$watch('warehouses', (ws) => {
-      this.warehouseOptions = (ws || []).map(w => ({ value: w.id, text: w.name }));
-      if (!this.registerForm.warehouse_id && this.sale && this.sale.warehouse_id) {
-        this.registerForm.warehouse_id = this.sale.warehouse_id;
-      }
-      // Always check current register after initial data load
-      this.refreshCurrentRegister();
-    });
-    // refresh register when warehouse changes
-    this.$watch(() => this.sale.warehouse_id, () => {
-      this.registerForm.warehouse_id = this.sale.warehouse_id || '';
-      this.refreshCurrentRegister();
-    });
+    this.$watch('warehouses', () => this.refreshCurrentRegister());
+    this.$watch(() => this.sale.warehouse_id, () => this.refreshCurrentRegister());
     // Reset POS after successful payment from ModernPaymentModal.
     // Vue 3: component-instance $on is gone — the template's
     // @payment-success handler chains Reset_Pos instead (see

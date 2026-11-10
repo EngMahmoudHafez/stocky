@@ -11,5 +11,7 @@ class PaymentMethod extends Model
 
     protected $dates = ['deleted_at'];
 
-    protected $fillable = ['name', 'is_active'];
+    protected $fillable = ['name', 'is_active', 'is_cash'];
+
+    protected $casts = ['is_cash' => 'boolean'];
 }

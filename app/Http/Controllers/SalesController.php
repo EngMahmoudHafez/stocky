@@ -417,8 +417,9 @@ class SalesController extends BaseController
                         $amount_paid_now += $line_amount;
                         $line_account_id = isset($line['account_id']) && $line['account_id'] ? $line['account_id'] : null;
 
-                        // All payment methods (including card) are handled uniformly; no Stripe charge is performed here.
-                        PaymentSale::create([
+                        $paymentContext = app(\App\Services\CashRegisterService::class)->paymentContext(Auth::user(), (int) $order->warehouse_id,
+                            \App\Models\PaymentMethod::findOrFail($line['payment_method_id'] ?? $request->payment['payment_method_id']), $line_account_id ? (int) $line_account_id : null);
+                        app(\App\Services\CashRegisterService::class)->postSalePayment([
                             'sale_id' => $order->id,
                             'Ref' => app('App\Http\Controllers\PaymentSalesController')->getNumberOrder(),
                             'date' => Carbon::now(),
@@ -428,16 +429,8 @@ class SalesController extends BaseController
                             'change' => isset($line['change']) ? $line['change'] : 0,
                             'notes' => null,
                             'user_id' => Auth::user()->id,
-                        ]);
+                        ], $paymentContext);
 
-                        if ($line_account_id) {
-                            $account = Account::find($line_account_id);
-                            if ($account) {
-                                $account->update([
-                                    'balance' => $account->balance + $line_amount,
-                                ]);
-                            }
-                        }
                     }
 
                     $total_paid = $sale->paid_amount + $amount_paid_now;
@@ -588,6 +581,7 @@ class SalesController extends BaseController
     public function update(Request $request, $id)
     {
         $this->authorizeForUser($request->user('api'), 'update', Sale::class);
+        app(\App\Services\CashRegisterService::class)->assertSaleMutable((int) $id);
 
         request()->validate([
             'warehouse_id' => 'required',
@@ -1035,6 +1029,7 @@ class SalesController extends BaseController
     public function destroy(Request $request, $id)
     {
         $this->authorizeForUser($request->user('api'), 'delete', \App\Models\Sale::class);
+        app(\App\Services\CashRegisterService::class)->assertSaleMutable((int) $id);
 
         // We’ll capture QBO identifiers before deletion so we can sync after commit
         $qboInfo = [
@@ -1239,6 +1234,7 @@ class SalesController extends BaseController
             $view_records = $user->hasRecordView();
             $selectedIds = $request->selectedIds;
             foreach ($selectedIds as $sale_id) {
+                app(\App\Services\CashRegisterService::class)->assertSaleMutable((int) $sale_id);
 
                 if (SaleReturn::where('sale_id', $sale_id)->where('deleted_at', '=', null)->exists()) {
                     return response()->json(['success' => false, 'Return exist for the Transaction' => false], 403);

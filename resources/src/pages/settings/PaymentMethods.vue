@@ -43,6 +43,7 @@
         <a-form-item :label="$t('Name')" name="name">
           <a-input v-model:value="form.name" :placeholder="$t('Enter_Payment_Method')" />
         </a-form-item>
+        <a-form-item><a-checkbox v-model:checked="form.is_cash">{{ locale === 'ar' ? 'تحصيل نقدي داخل درج الكاشير' : 'Cash collected in the cashier drawer' }}</a-checkbox></a-form-item>
       </a-form>
     </a-modal>
   </div>
@@ -63,7 +64,7 @@ import DataTable from '../../components/DataTable.vue';
 import { useCrudTable } from '../../composables/useCrudTable';
 import http from '../../lib/http';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const crud = useCrudTable('payment_methods', { rowsKey: 'methods' });
 crud.fetchRows();
@@ -77,7 +78,7 @@ const modalOpen = ref(false);
 const saving = ref(false);
 const editing = ref(null);
 const formRef = ref();
-const form = ref({ name: '' });
+const form = ref({ name: '', is_cash: false });
 
 const formRules = computed(() => ({
   name: [{ required: true, message: t('Field_is_required') }],
@@ -85,13 +86,13 @@ const formRules = computed(() => ({
 
 function openCreate() {
   editing.value = null;
-  form.value = { name: '' };
+  form.value = { name: '', is_cash: false };
   modalOpen.value = true;
 }
 
 function openEdit(record) {
   editing.value = record;
-  form.value = { name: record.name };
+  form.value = { name: record.name, is_cash: !!record.is_cash };
   modalOpen.value = true;
 }
 
@@ -104,10 +105,10 @@ async function save() {
   saving.value = true;
   try {
     if (editing.value) {
-      await http.put(`payment_methods/${editing.value.id}`, { name: form.value.name });
+      await http.put(`payment_methods/${editing.value.id}`, form.value);
       message.success(t('Successfully_Updated'));
     } else {
-      await http.post('payment_methods', { name: form.value.name });
+      await http.post('payment_methods', form.value);
       message.success(t('Successfully_Created'));
     }
     modalOpen.value = false;
