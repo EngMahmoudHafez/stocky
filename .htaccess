@@ -5,27 +5,21 @@
 
 RewriteEngine On
 
-# When shared hosting serves the project root, transparently serve public assets
-# from Laravel's public directory instead of forwarding them to the PHP router.
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
-RewriteRule ^(.+)$ public/$1 [END]
-
 # Handle Authorization Header
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-
-RewriteCond %{REQUEST_FILENAME} -d [OR]
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^ ^$1 [N]
-
-RewriteCond %{REQUEST_URI} (\.\w+$) [NC]
-RewriteRule ^(.*)$ public/$1
-
-RewriteCond %{REQUEST_FILENAME} !-d
+# Serve existing files from Laravel's public directory when the host points the
+# domain at the project root instead of public/.
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ server.php
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+RewriteRule ^ public%{REQUEST_URI} [END]
+
+# Keep the application source and dependencies outside the URL space.
+RewriteRule ^(?:app|bootstrap|config|database|resources|routes|tests|vendor|node_modules)(?:/|$) - [F,END,NC]
+
+# Let Laravel handle application routes through its public entry point.
+RewriteRule ^ public/index.php [END]
 
 
 #Disable index view
