@@ -9,11 +9,10 @@ RewriteEngine On
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-# Serve existing files from Laravel's public directory when the host points the
+# Map public asset paths to Laravel's public directory when the host points the
 # domain at the project root instead of public/.
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
-RewriteRule ^ public%{REQUEST_URI} [END]
+RewriteRule ^(js|css|images|fonts|flags|pwa_images|vendor|storage|import|audio|store_files|assets_setup)/(.+)$ public/$1/$2 [END,NC]
+RewriteRule ^(manifest[^/]*\.webmanifest|sw\.js|offline\.html|favicon\.ico)$ public/$1 [END,NC]
 
 # Keep the application source and dependencies outside the URL space.
 RewriteRule ^(?:app|bootstrap|config|database|resources|routes|tests|vendor|node_modules)(?:/|$) - [F,END,NC]
