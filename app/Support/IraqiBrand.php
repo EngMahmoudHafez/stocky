@@ -8,9 +8,9 @@ class IraqiBrand
 {
     public const NAME = 'العراقي';
 
-    public const LOGO = 'eleraky-icon-512.png';
+    public const LOGO = 'eleraky-icon-transparent.png';
 
-    public const FAVICON = 'eleraky-favicon.png';
+    public const FAVICON = 'eleraky-favicon-transparent.png';
 
     /** @return array<string, string|int> */
     public static function administration(): array
@@ -35,7 +35,7 @@ class IraqiBrand
             'store_name' => self::NAME,
             'primary_color' => '#214d35', 'secondary_color' => '#ae8d53',
             'logo_path' => 'images/'.self::LOGO, 'favicon_path' => 'images/'.self::FAVICON,
-            'hero_image_path' => 'images/eleraky-logo.jpg',
+            'hero_image_path' => 'images/store/iraqi-demo-hero.svg',
             'hero_title' => 'العراقي… بتاع جملة',
             'hero_subtitle' => 'تشكيلة العراقي من الملابس بألوان ومقاسات متنوعة. استعرض الموديلات واختار المناسب لك.',
             'seo_meta_title' => 'العراقي | ELERAKY — بتاع جملة',
