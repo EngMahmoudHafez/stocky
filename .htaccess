@@ -5,6 +5,12 @@
 
 RewriteEngine On
 
+# When shared hosting serves the project root, transparently serve public assets
+# from Laravel's public directory instead of forwarding them to the PHP router.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+RewriteRule ^(.+)$ public/$1 [END]
+
 # Handle Authorization Header
 RewriteCond %{HTTP:Authorization} .
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
