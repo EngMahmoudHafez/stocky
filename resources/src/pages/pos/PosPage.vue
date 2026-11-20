@@ -7473,6 +7473,14 @@ export default {
       // - trigger print
       // - reload after Print/Cancel when "After this sale" is selected
       if (format === 'a4') {
+        // Same auto-print switch as the thermal receipt: when it is off, the
+        // A4 invoice prints only on an explicit request (F9 / print last).
+        const rawA4Printable = (this.pos_settings && this.pos_settings.is_printable !== undefined)
+          ? this.pos_settings.is_printable : 1;
+        const a4AutoPrint = rawA4Printable === true || rawA4Printable === 1 || rawA4Printable === '1';
+        if (!a4AutoPrint && !(opts && opts.forcePrint)) {
+          return;
+        }
         if (typeof window !== 'undefined') {
           const vm = this;
           const reloadAfterSale = !!vm.onlineReloadAfterSale;
@@ -7505,6 +7513,9 @@ export default {
           const features = `height=${height},width=${width},left=${left},top=${top},toolbar=0,location=0,menubar=0,status=0,scrollbars=1,resizable=1`;
           const win = window.open('', 'A4Invoice', features);
           if (!win) {
+            // Opened after the sale was saved, so a slow save can get the
+            // popup blocked. F9 is a fresh click, which browsers allow.
+            this.notifyPrintBlocked();
             return;
           }
 
@@ -8553,7 +8564,10 @@ export default {
     _writePrintWindow(el) {
       var divContents = el.innerHTML;
       var a = window.open('', '', 'height=600,width=480');
-      if (!a) { return; }
+      // Auto-print runs after the sale request, outside the cashier's click,
+      // so the popup blocker may refuse it — print through a hidden iframe
+      // instead (no popup needed) rather than silently printing nothing.
+      if (!a) { return this._print_pos_mobile_impl(); }
       const bodyClass = this.currentReceiptPaperSizeClass || '';
       a.document.write('<html><head><link rel="stylesheet" href="/css/pos_print.css">' + this.receiptFontCssTag + '</head><body class="' + bodyClass + '">');
       // Wrap in #invoice-POS so print CSS applies correctly and centers content
@@ -9020,6 +9034,10 @@ export default {
           this.applyStockUpdate(evt.updated_stock, evt.server_time);
         }
       } catch (e) {}
+      // Lets F9 reprint this sale's receipt (the legacy flow sets it too).
+      if (evt && !evt.offline && evt.id) {
+        this.last_sale_id = evt.id;
+      }
 
       // If this was an offline-queued sale, build a local invoice and print it
       try {
@@ -9684,6 +9702,18 @@ export default {
     // Invoice_POS() which fetches the sale, renders the hidden #invoice-POS
     // and prints directly (no modal); forcePrint bypasses the is_printable
     // auto-print gate since this is an explicit user action.
+    notifyPrintBlocked() {
+      const ar = this.$i18n && this.$i18n.locale === 'ar';
+      try {
+        this.makeToast && this.makeToast(
+          'warning',
+          ar ? 'المتصفح منع نافذة الطباعة. اضغط F9 لطباعة الفاتورة، أو اسمح بالنوافذ المنبثقة لهذا الموقع.'
+             : 'The browser blocked the print window. Press F9 to print the invoice, or allow pop-ups for this site.',
+          ar ? 'الطباعة' : 'Print'
+        );
+      } catch (e) {}
+    },
+
     print_last_receipt() {
       if (!this.last_sale_id) {
         try {
