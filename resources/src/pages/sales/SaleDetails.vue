@@ -139,12 +139,11 @@
       </a-table>
 
       <div class="inv-summary">
-        <!-- Summary labels hardcoded English in legacy's invoice too. -->
         <table>
-          <tr><td>Subtotal:</td><td>{{ money(subtotal) }}</td></tr>
-          <tr><td>Order Tax:</td><td>{{ money(sale.TaxNet) }}</td></tr>
+          <tr><td>{{ $t('SubTotal') }}:</td><td>{{ money(subtotal) }}</td></tr>
+          <tr><td>{{ $t('OrderTax') }}:</td><td>{{ money(sale.TaxNet) }}</td></tr>
           <tr v-if="Number(sale.discount) > 0">
-            <td>Discount:</td>
+            <td>{{ $t('Discount') }}:</td>
             <td class="neg">
               <template v-if="String(sale.discount_Method || '2') === '1'">
                 - {{ num(sale.discount) }}% ({{ money(discountAmount) }})
@@ -153,10 +152,10 @@
             </td>
           </tr>
           <tr v-if="Number(sale.discount_from_points) > 0">
-            <td>Discount from Points:</td>
+            <td>{{ $t('Discount_from_Points') }}:</td>
             <td class="neg">- {{ money(sale.discount_from_points) }}</td>
           </tr>
-          <tr><td>Shipping:</td><td>{{ money(sale.shipping) }}</td></tr>
+          <tr><td>{{ $t('Shipping') }}:</td><td>{{ money(sale.shipping) }}</td></tr>
           <tr class="grand"><td>{{ $t('Total') }}:</td><td>{{ money(sale.GrandTotal) }}</td></tr>
           <tr><td>{{ $t('Paid') }}:</td><td style="color: #52c41a">{{ money(sale.paid_amount) }}</td></tr>
           <tr><td>{{ $t('Due') }}:</td><td style="color: #ff4d4f">{{ money(sale.due) }}</td></tr>

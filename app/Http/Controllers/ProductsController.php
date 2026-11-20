@@ -2430,8 +2430,10 @@ class ProductsController extends BaseController
 
                 // Calculate qte_sale based on sale unit if exists
                 if ($Product_data['unitSale']) {
+                    // '/' sale units are smaller than the base unit (g of kg),
+                    // so stock in sale units is base × value — as in the price math above.
                     if ($Product_data['unitSale']->operator == '/') {
-                        $item['qte_sale'] = $product_warehouse->qte / $Product_data['unitSale']->operator_value;
+                        $item['qte_sale'] = $product_warehouse->qte * $Product_data['unitSale']->operator_value;
                     } else {
                         $item['qte_sale'] = $product_warehouse->qte / $Product_data['unitSale']->operator_value;
                     }

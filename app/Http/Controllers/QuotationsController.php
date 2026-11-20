@@ -1154,8 +1154,7 @@ class QuotationsController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $quotation_url = url('/api/quote_pdf/'.$request->id.'?'.$random_number);
+        $quotation_url = \App\Support\DocumentLink::make('print.quote_pdf', $request->id);
         $quotation_number = $quotation->Ref;
 
         $total_amount = $currency.' '.number_format($quotation->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -1214,8 +1213,7 @@ class QuotationsController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $quotation_url = url('/api/quote_pdf/'.$request->id.'?'.$random_number);
+        $quotation_url = \App\Support\DocumentLink::make('print.quote_pdf', $request->id);
         $quotation_number = $quotation->Ref;
 
         $total_amount = $currency.' '.number_format($quotation->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -1344,8 +1342,7 @@ class QuotationsController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $quotation_url = url('/api/quote_pdf/'.$request->id.'?'.$random_number);
+        $quotation_url = \App\Support\DocumentLink::make('print.quote_pdf', $request->id);
         $quotation_number = $quotation->Ref;
 
         $total_amount = $currency.' '.number_format($quotation->GrandTotal, helpers::price_decimals(), '.', ',');

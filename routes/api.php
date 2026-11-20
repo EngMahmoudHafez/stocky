@@ -1655,27 +1655,34 @@ Route::get('pos/customer-display/last-cart', [CustomerDisplayController::class, 
 
 // -------------------------------  Print & PDF ------------------------\\
 // ------------------------------------------------------------------\\
+// Logged-in users only — or a signed link sent to a customer/supplier
+// (App\Support\DocumentLink). Never reachable by guessing an id.
 
-Route::get('sale_pdf/{id}', 'SalesController@Sale_PDF');
-Route::get('sale_print_html/{id}', 'SalesController@Sale_PDF_Inline');
-Route::get('quote_pdf/{id}', 'QuotationsController@Quotation_pdf');
-Route::get('quote_print_html/{id}', 'QuotationsController@Quotation_PDF_Inline');
-Route::get('booking_pdf/{id}', 'BookingController@booking_pdf');
-Route::get('service_job_pdf/{id}', 'ServiceJobController@service_job_pdf');
-Route::get('service_quote_pdf/{id}', 'ServiceJobController@service_quote_pdf');
-Route::get('purchase_pdf/{id}', 'PurchasesController@Purchase_pdf');
-Route::get('purchase_print_html/{id}', 'PurchasesController@Purchase_PDF_Inline');
-Route::get('return_sale_pdf/{id}', 'SalesReturnController@Return_pdf');
-Route::get('return_purchase_pdf/{id}', 'PurchasesReturnController@Return_pdf');
-Route::get('payment_purchase_pdf/{id}', 'PaymentPurchasesController@Payment_purchase_pdf');
-Route::get('payment_return_sale_pdf/{id}', 'PaymentSaleReturnsController@payment_return');
-Route::get('payment_return_purchase_pdf/{id}', 'PaymentPurchaseReturnsController@payment_return');
-Route::get('payment_sale_pdf/{id}', 'PaymentSalesController@payment_sale');
-Route::get('sales_print_invoice/{id}', 'SalesController@Print_Invoice_POS');
-Route::post('direct_network_print/{id}', 'SalesController@Direct_Network_Print_POS');
-Route::get('transfer_pdf/{id}', 'TransferController@transfer_pdf');
-Route::get('adjustment_pdf/{id}', 'AdjustmentController@adjustment_pdf');
-Route::get('damage_pdf/{id}', 'DamageController@damage_pdf');
+Route::middleware(['auth.or_signed'])->group(function () {
+    Route::get('sale_pdf/{id}', 'SalesController@Sale_PDF')->name('print.sale_pdf');
+    Route::get('sale_print_html/{id}', 'SalesController@Sale_PDF_Inline')->name('print.sale_print_html');
+    Route::get('quote_pdf/{id}', 'QuotationsController@Quotation_pdf')->name('print.quote_pdf');
+    Route::get('quote_print_html/{id}', 'QuotationsController@Quotation_PDF_Inline')->name('print.quote_print_html');
+    Route::get('booking_pdf/{id}', 'BookingController@booking_pdf')->name('print.booking_pdf');
+    Route::get('service_job_pdf/{id}', 'ServiceJobController@service_job_pdf')->name('print.service_job_pdf');
+    Route::get('service_quote_pdf/{id}', 'ServiceJobController@service_quote_pdf')->name('print.service_quote_pdf');
+    Route::get('purchase_pdf/{id}', 'PurchasesController@Purchase_pdf')->name('print.purchase_pdf');
+    Route::get('purchase_print_html/{id}', 'PurchasesController@Purchase_PDF_Inline')->name('print.purchase_print_html');
+    Route::get('return_sale_pdf/{id}', 'SalesReturnController@Return_pdf')->name('print.return_sale_pdf');
+    Route::get('return_purchase_pdf/{id}', 'PurchasesReturnController@Return_pdf')->name('print.return_purchase_pdf');
+    Route::get('payment_purchase_pdf/{id}', 'PaymentPurchasesController@Payment_purchase_pdf')->name('print.payment_purchase_pdf');
+    Route::get('payment_return_sale_pdf/{id}', 'PaymentSaleReturnsController@payment_return')->name('print.payment_return_sale_pdf');
+    Route::get('payment_return_purchase_pdf/{id}', 'PaymentPurchaseReturnsController@payment_return')->name('print.payment_return_purchase_pdf');
+    Route::get('payment_sale_pdf/{id}', 'PaymentSalesController@payment_sale')->name('print.payment_sale_pdf');
+    Route::get('sales_print_invoice/{id}', 'SalesController@Print_Invoice_POS')->name('print.sales_print_invoice');
+    Route::get('transfer_pdf/{id}', 'TransferController@transfer_pdf')->name('print.transfer_pdf');
+    Route::get('adjustment_pdf/{id}', 'AdjustmentController@adjustment_pdf')->name('print.adjustment_pdf');
+    Route::get('damage_pdf/{id}', 'DamageController@damage_pdf')->name('print.damage_pdf');
+});
+
+Route::middleware(['auth:api', 'Is_Active'])->group(function () {
+    Route::post('direct_network_print/{id}', 'SalesController@Direct_Network_Print_POS');
+});
 
 // Route::get('/available-modules', 'ModuleSettingsController@get_modules_enabled');
 

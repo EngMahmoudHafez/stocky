@@ -740,8 +740,7 @@ class PosController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/sale_pdf/'.$id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.sale_pdf', $id);
         $invoice_number = $sale->Ref;
 
         $total_amount = $currency.' '.number_format($sale->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -803,8 +802,7 @@ class PosController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/sale_pdf/'.$id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.sale_pdf', $id);
         $invoice_number = $sale->Ref;
 
         $total_amount = $currency.' '.number_format($sale->GrandTotal, helpers::price_decimals(), '.', ',');

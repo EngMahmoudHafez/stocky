@@ -1807,8 +1807,7 @@ class PurchasesController extends BaseController
             $message_subject = '';
         }
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/purchase_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.purchase_pdf', $request->id);
 
         $invoice_number = $purchase->Ref;
 
@@ -1872,8 +1871,7 @@ class PurchasesController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/purchase_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.purchase_pdf', $request->id);
         $invoice_number = $purchase->Ref;
 
         $total_amount = $currency.' '.number_format($purchase->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -2012,8 +2010,7 @@ class PurchasesController extends BaseController
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/purchase_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.purchase_pdf', $request->id);
         $invoice_number = $purchase->Ref;
 
         $total_amount = $currency.' '.number_format($purchase->GrandTotal, helpers::price_decimals(), '.', ',');

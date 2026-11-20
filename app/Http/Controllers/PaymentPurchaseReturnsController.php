@@ -476,7 +476,7 @@ class PaymentPurchaseReturnsController extends BaseController
         $gateway = sms_gateway::where('id', $settings->sms_gateway)
             ->where('deleted_at', '=', null)->first();
 
-        $url = url('/api/payment_return_purchase_pdf/'.$request->id);
+        $url = \App\Support\DocumentLink::make('print.payment_return_purchase_pdf', $request->id);
         $receiverNumber = $payment['PurchaseReturn']['provider']->phone;
         $message = 'Dear'.' '.$payment['PurchaseReturn']['provider']->name." \n We are contacting you in regard to a Payment #".$payment['PurchaseReturn']->Ref.' '.$url.' '."that has been created on your account. \n We look forward to conducting future business with you.";
 

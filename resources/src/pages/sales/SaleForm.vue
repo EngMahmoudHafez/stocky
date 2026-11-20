@@ -794,7 +794,11 @@ async function onProductPicked(idx) {
       code: d.code || p.code,
       name: d.name,
       stock: d.product_type !== 'is_service' ? d.qte_sale : '---',
-      quantity: d.qte_sale !== undefined && d.qte_sale < 1 ? d.qte_sale : 1,
+      // 1, or the fraction left when under one unit is in stock. Services and
+      // oversold (zero/negative) stock must never start a line at or below 0.
+      quantity: d.product_type !== 'is_service' && !isOversellingAllowed.value && Number(d.qte_sale) < 1
+        ? Math.max(Number(d.qte_sale) || 0, 0)
+        : 1,
       Unit_price: d.Unit_price,
       Net_price: d.Net_price,
       discount: d.discount,
@@ -1085,7 +1089,7 @@ function validateForm() {
   }
   let emptyQty = 0;
   for (const l of lines.value) {
-    if (l.quantity === '' || Number(l.quantity) === 0) {
+    if (l.quantity === '' || l.quantity === null || !(Number(l.quantity) > 0)) {
       emptyQty += 1;
       continue;
     }

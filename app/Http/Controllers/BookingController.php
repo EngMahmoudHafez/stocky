@@ -578,8 +578,7 @@ class BookingController extends BaseController
         $start_time = $booking->booking_time ?? '';
         $end_time = $booking->booking_end_time ?? '';
         $service_name = $booking->product ? $booking->product->name : ($settings ? __('Not_Applicable') : 'N/A');
-        $random = Str::random(10);
-        $booking_url = url('/api/booking_pdf/'.$booking->id.'?'.$random);
+        $booking_url = \App\Support\DocumentLink::make('print.booking_pdf', $booking->id);
 
         $message_body = str_replace('{contact_name}', $contact_name, $message_body);
         $message_body = str_replace('{business_name}', $business_name, $message_body);

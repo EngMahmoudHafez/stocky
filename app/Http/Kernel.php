@@ -90,6 +90,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'Is_Active' => \App\Http\Middleware\Is_Active::class,
+        'auth.or_signed' => \App\Http\Middleware\AuthenticateUnlessSigned::class,
         'store.data' => \App\Http\Middleware\StoreDataMiddleware::class,
         'setlocale' => \App\Http\Middleware\SetLocale::class,
         'XSS' => \App\Http\Middleware\XSS::class,

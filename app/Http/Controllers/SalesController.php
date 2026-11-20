@@ -235,6 +235,8 @@ class SalesController extends BaseController
         request()->validate([
             'client_id' => 'required',
             'warehouse_id' => 'required',
+            'details' => 'required|array|min:1',
+            'details.*.quantity' => 'required|numeric|gt:0',
         ]);
 
         // Multi-Pack Selling: a completed sale deducts quantity × pack_multiplier
@@ -406,6 +408,16 @@ class SalesController extends BaseController
                             'account_id' => $request->payment['account_id'] ?? null,
                             'change' => $request['change'] ?? 0,
                         ]];
+                    }
+
+                    // A single payment larger than the invoice is cash handed
+                    // back as change: record only what the sale received (same
+                    // rule as POS) so the drawer, paid amount and status stay right.
+                    $paymentLines = array_values(array_filter($paymentLines, fn ($l) => (float) ($l['amount'] ?? 0) > 0));
+                    $grandTotal = (float) $order->GrandTotal;
+                    if (count($paymentLines) === 1 && (float) $paymentLines[0]['amount'] > $grandTotal) {
+                        $paymentLines[0]['change'] = round((float) $paymentLines[0]['amount'] - $grandTotal, 2);
+                        $paymentLines[0]['amount'] = max($grandTotal, 0);
                     }
 
                     $amount_paid_now = 0;
@@ -1465,10 +1477,11 @@ class SalesController extends BaseController
                     ->where('id', $detail->product_id)
                     ->first();
 
+                $unit = null;
+
                 if ($product_unit_sale_id['unitSale']) {
                     $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                 }
-                $unit = null;
 
             }
 
@@ -1585,10 +1598,10 @@ class SalesController extends BaseController
                 $product_unit_sale_id = Product::with('unitSale')
                     ->where('id', $detail->product_id)
                     ->first();
+                $unit = null;
                 if ($product_unit_sale_id['unitSale']) {
                     $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                 }
-                $unit = null;
 
             }
 
@@ -2514,10 +2527,11 @@ class SalesController extends BaseController
                     ->where('id', $detail->product_id)
                     ->first();
 
+                $unit = null;
+
                 if ($product_unit_sale_id['unitSale']) {
                     $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                 }
-                $unit = null;
 
             }
 
@@ -2650,10 +2664,11 @@ class SalesController extends BaseController
                     ->where('id', $detail->product_id)
                     ->first();
 
+                $unit = null;
+
                 if ($product_unit_sale_id['unitSale']) {
                     $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                 }
-                $unit = null;
             }
 
             if ($detail->product_variant_id) {
@@ -2933,10 +2948,11 @@ if ((int) $user_auth->is_all_warehouses === 1) {
                         ->where('id', $detail->product_id)
                         ->first();
 
+                    $unit = null;
+
                     if ($product_unit_sale_id['unitSale']) {
                         $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                     }
-                    $unit = null;
 
                     $data['no_unit'] = 0;
                 }
@@ -3293,10 +3309,11 @@ if ((int) $user_auth->is_all_warehouses === 1) {
                     ->where('id', $detail->product_id)
                     ->first();
 
+                $unit = null;
+
                 if ($product_unit_sale_id['unitSale']) {
                     $unit = Unit::where('id', $product_unit_sale_id['unitSale']->id)->first();
                 }
-                $unit = null;
 
                 $data['no_unit'] = 0;
             }
@@ -3423,8 +3440,7 @@ if ((int) $user_auth->is_all_warehouses === 1) {
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/sale_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.sale_pdf', $request->id);
         $invoice_number = $sale->Ref;
 
         $total_amount = $currency.' '.number_format($sale->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -3487,8 +3503,7 @@ if ((int) $user_auth->is_all_warehouses === 1) {
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/sale_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.sale_pdf', $request->id);
         $invoice_number = $sale->Ref;
 
         $total_amount = $currency.' '.number_format($sale->GrandTotal, helpers::price_decimals(), '.', ',');
@@ -3627,8 +3642,7 @@ if ((int) $user_auth->is_all_warehouses === 1) {
         }
 
         // Tags
-        $random_number = Str::random(10);
-        $invoice_url = url('/api/sale_pdf/'.$request->id.'?'.$random_number);
+        $invoice_url = \App\Support\DocumentLink::make('print.sale_pdf', $request->id);
         $invoice_number = $sale->Ref;
 
         $total_amount = $currency.' '.number_format($sale->GrandTotal, helpers::price_decimals(), '.', ',');
