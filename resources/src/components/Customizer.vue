@@ -9,7 +9,7 @@
 
     <a-drawer
       v-model:open="open"
-      placement="right"
+      :placement="drawerPlacement"
       root-class-name="cz-drawer"
       :width="300"
       :title="$t('Settings')"
@@ -127,6 +127,9 @@ const ui = useUiStore();
 const auth = useAuthStore();
 
 const open = ref(false);
+// The handle sits at the bottom inline-end corner (left in Arabic, away from
+// the sidebar), so the panel opens from that same side.
+const drawerPlacement = computed(() => (ui.direction === 'rtl' ? 'left' : 'right'));
 
 // Hide the floating handle while any Ant overlay is open: modals, confirm
 // dialogs, image previews and drawers — except the customizer's own drawer
@@ -205,7 +208,7 @@ function sameColor(c) {
 <style scoped>
 .cz-handle {
   position: fixed;
-  right: 24px;
+  inset-inline-end: 24px;
   bottom: 24px;
   z-index: 1001;
   width: 44px;
@@ -220,11 +223,16 @@ function sameColor(c) {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: right 0.2s;
+  transition: inset-inline-end 0.2s;
 }
-/* Slide clear of the right drawer (300px) so it doubles as a close button. */
+/* Slide clear of the drawer (300px) so it doubles as a close button. */
 .cz-handle.open {
-  right: 324px;
+  inset-inline-end: 324px;
+}
+/* Phones: the floating gear covered card content and the theme options are
+   not needed there, so it is hidden below tablet width. */
+@media (max-width: 767px) {
+  .cz-handle { display: none; }
 }
 .cz-layouts {
   display: flex;

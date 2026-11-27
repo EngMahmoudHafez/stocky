@@ -109,7 +109,11 @@ const collapsed = computed({
 });
 
 // ---- Responsive: below 992px the sidebar becomes an off-canvas overlay ----
-const isMobile = ref(false);
+// Read the breakpoint synchronously so the FIRST paint is already the phone
+// layout; starting from false drew the full desktop sidebar over the page and
+// then slid it away once mounted — a visible flash on every load.
+const MOBILE_QUERY = '(max-width: 991px)';
+const isMobile = ref(typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches);
 const mobileOpen = ref(false);
 let mq = null;
 function syncMq(e) {
@@ -133,7 +137,7 @@ function goHome() {
 watch(() => route.path, () => { mobileOpen.value = false; });
 
 onMounted(() => {
-  mq = window.matchMedia('(max-width: 991px)');
+  mq = window.matchMedia(MOBILE_QUERY);
   syncMq(mq);
   mq.addEventListener('change', syncMq);
 });
@@ -256,13 +260,13 @@ async function logout() {
   gap: 10px;
   padding: 16px 20px;
   cursor: pointer;
-  border-right: 1px solid #ececee;
+  border-inline-end: 1px solid #ececee;
   border-bottom: 1px solid #ececee;
 }
 /* Same tint as .topbar--dark's border; covers app dark mode AND the "dark
    sidebar in a light app" layout, both of which set sider--dark. */
 .sider--dark .brand {
-  border-right-color: rgba(253, 253, 253, 0.12);
+  border-inline-end-color: rgba(253, 253, 253, 0.12);
   border-bottom-color: rgba(253, 253, 253, 0.12);
 }
 .brand-logo {
@@ -336,13 +340,14 @@ async function logout() {
 .footer-version {
   position: absolute;
   top: 10px;
-  right: 16px;
+  inset-inline-end: 16px;
   font-size: 11px;
   opacity: 0.75;
 }
 
 /* ============================ Responsive ============================ */
-/* Below 992px the sider slides in over the content instead of pushing it. */
+/* Below 992px the sider slides in over the content instead of pushing it,
+   from the same side the hamburger sits on: the start edge (right in Arabic). */
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
@@ -351,17 +356,27 @@ async function logout() {
 }
 .sider--mobile {
   position: fixed !important;
-  left: 0;
+  inset-inline-start: 0;
   top: 0;
   bottom: 0;
   z-index: 200;
   height: 100vh;
+  height: 100dvh;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25);
+  /* No shadow while closed — it leaked a grey strip along the screen edge. */
+  box-shadow: none;
 }
-.sider--mobile-open {
+/* Keyed on Ant's RTL layout class — the same direction that resolves
+   inset-inline-start above (html[dir] follows the language, but a manual RTL
+   toggle in the customizer can differ from it). Whole selector inside
+   :global(): `:global(x) .y` compiles to a bare `x` rule. */
+:global(.ant-layout-rtl > .sider--mobile) {
+  transform: translateX(100%);
+}
+.sider--mobile.sider--mobile-open {
   transform: translateX(0);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.25);
 }
 
 @media (max-width: 767px) {

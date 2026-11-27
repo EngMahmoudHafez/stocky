@@ -139,7 +139,11 @@ const handover = ref(newHandover());
 const closing = ref({ counted_cash: null, notes: '' });
 const register = computed(() => workspace.value?.current_register);
 const ownOpenShift = computed(() => workspace.value?.registers.some(row => row.user_id === auth.user?.id && row.status === 'open'));
-const registerOptions = computed(() => workspace.value?.registers.map(row => ({ value: row.id, label: `#${row.id} · ${row.user?.username} · ${row.warehouse?.name} · ${row.status}` })) || []);
+// The raw status ('open' / 'closed') leaked English into the Arabic picker.
+const statusWord = status => (locale.value === 'ar'
+  ? ({ open: 'مفتوحة', closed: 'مقفولة' }[status] || status)
+  : ({ open: 'Open', closed: 'Closed' }[status] || status));
+const registerOptions = computed(() => workspace.value?.registers.map(row => ({ value: row.id, label: `#${row.id} · ${row.user?.username} · ${row.warehouse?.name} · ${statusWord(row.status)}` })) || []);
 const treasuryOptions = computed(() => workspace.value?.treasuries.map(row => ({ value: row.id, label: row.account_name })) || []);
 const receiverOptions = computed(() => workspace.value?.receivers.map(row => ({ value: row.id, label: row.username })) || []);
 const warehouseOptions = computed(() => workspace.value?.warehouses.map(row => ({ value: row.id, label: row.name })) || []);

@@ -88,3 +88,16 @@ body {
 .ant-table-wrapper .ant-table-content {
   overflow-x: auto;
 }
+
+/* Report KPI tiles (22 report pages share this markup with scoped styles that
+   truncate the value with an ellipsis). In Arabic the ellipsis eats the START
+   of the number — 19,173.00 showed as "73.00…" on phones — so an amount must
+   wrap instead of being cut. Card-qualified selector so it outranks the
+   pages' scoped rules. */
+.ant-card.kpi-card .kpi-value {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
